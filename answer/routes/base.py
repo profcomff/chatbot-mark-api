@@ -49,9 +49,9 @@ class UserInput(BaseModel):
     text: str
 
         
-data = pd.read_csv("/ff/file/context.csv")["QA"]
+data = pd.read_csv("file/context.csv")["QA"]
     
-with open("/ff/file/key.json") as f:
+with open("file/key.json") as f:
     settings = json.load(f)
 service_account_id = settings["service_account_id"]
 key_id = settings["id"]
@@ -60,7 +60,7 @@ folder_id = "b1ggivrnbg1ftsr8no1s"
     
 tokenizer, model = load_model()
     
-context_embs = torch.load("/ff/file/context.pt")
+context_embs = torch.load("file/context.pt")
 
 @app.post("/greet")
 async def greet(user_input: UserInput):
@@ -90,10 +90,23 @@ async def read_root():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Ассистент</title>
+        <style>
+            textarea {
+                width: 100%;
+                height: 150px;
+                padding: 12px 20px;
+                box-sizing: border-box;
+                border: 2px solid #ccc;
+                border-radius: 4px;
+                background-color: #f8f8f8;
+                font-size: 16px;
+                resize: vertical;
+            }
+        </style>
     </head>
     <body>
         <h1>Ассистент</h1>
-        <input type="text" id="userInput" placeholder="Введите текст">
+        <textarea id="userInput" placeholder="Введите текст"></textarea>
         <button id="sendRequest">Отправить</button>
         
         <div id="response"></div>

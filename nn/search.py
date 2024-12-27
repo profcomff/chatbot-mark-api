@@ -26,5 +26,5 @@ def get_similar_context(data, query_emb, context_embs, topk=15):
     similar_contex = list(data.iloc[index[0]])
     answer = ""
     for number, ans in enumerate(similar_contex):
-        answer += f" {number} " + ans
+        answer += f" {number} " + ans + '.\n'
     return answer

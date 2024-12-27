@@ -25,6 +25,6 @@ def get_similar_context(data, query_emb, context_embs, topk=15):
     index = torch.topk(scores.T, topk).indices
     similar_contex = list(data.iloc[index[0]])
     answer = ""
-    for number, ans in enumerate(similar_contex):
-        answer += f" {number} " + ans + '.\n'
+    for ans in similar_contex:
+        answer += 'Вопрос: ' +  + ans.replace(":", " Ответ: ") + ".\n"
     return answer

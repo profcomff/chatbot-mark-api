@@ -26,5 +26,5 @@ def get_similar_context(data, query_emb, context_embs, topk=15):
     similar_contex = list(data.iloc[index[0]])
     answer = ""
     for ans in similar_contex:
-        answer += 'Вопрос: ' +  + ans.replace(":", " Ответ: ") + ".\n"
+        answer += 'Вопрос: ' +  ans.replace(":", " Ответ: ") + ".\n"
     return answer

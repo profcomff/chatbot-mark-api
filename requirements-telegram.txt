@@ -1,4 +1,0 @@
-# requirements for telegram bot
-python-telegram-bot==20.8
-requests
-python-dotenv

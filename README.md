@@ -19,8 +19,14 @@
 
 4. Установите переменные окружения
     ```console
-    # path to the project
-    foo@bar:~$ export PATH4SEQ="/your/path"
+    # path to the data with answer
+    foo@bar:~$ export ANSWER_DATA="/your/path"
+    # path to the answer embeddings
+    foo@bar:~$ export EMB_DATA="/your/path"
+    # Model from HF
+    foo@bar:~$ export ANSWER_DATA="d0rj/e5-base-en-ru"
+    
+    
     ```
 
 4. Запускайте приложение!

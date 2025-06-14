@@ -24,7 +24,7 @@
     # path to the answer embeddings
     foo@bar:~$ export EMB_DATA="/your/path"
     # Model from HF
-    foo@bar:~$ export ANSWER_DATA="d0rj/e5-base-en-ru"
+    foo@bar:~$ export EMB_MODEL="d0rj/e5-base-en-ru"
     
     
     ```

@@ -79,4 +79,4 @@ class Bertinskii:
             "full_text": row['answer']
         })
 
-        return results
+        return results, scores

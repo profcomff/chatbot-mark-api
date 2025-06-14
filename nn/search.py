@@ -15,8 +15,8 @@ class Bertinskii:
     def load_tokenizer_model(self, model_name):
         try:
             self.model_name = model_name
-            self.tokenizer = XLMRobertaTokenizer.from_pretrained(self.model_name) # вот тут баг был
-            self.model = XLMRobertaModel.from_pretrained(self.model_name).to(self.device) #
+            self.tokenizer = XLMRobertaTokenizer.from_pretrained(self.model_name) 
+            self.model = XLMRobertaModel.from_pretrained(self.model_name).to(self.device) 
             self.model.eval()
             print(f"Loaded {self.model_name} on {self.device}")
         except Exception as e:

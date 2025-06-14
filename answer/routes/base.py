@@ -1,4 +1,5 @@
 import sys
+import os
 
 sys.path.append("../")
 
@@ -48,14 +49,14 @@ class UserInput(BaseModel):
     text: str
 
         
-data = pd.read_excel("file/answers_search.xlsx")   #заменить на переменную окружения 
-answer_embs = torch.load("file/answer_embeddings.pt") #заменить на переменную окружения 
+data = pd.read_excel(os.environ['ANSWER_DATA'])  
+answer_embs = torch.load(os.environ['EMB_DATA'])
 
 model_loading_status = "Модель загружается..."
 
 try:
     model_loading_status = "Загрузка токенизатора и модели..."
-    model_name = "d0rj/e5-base-en-ru"   #заменить на переменную окружения
+    model_name = os.environ['EMB_MODEL']
     model = Bertinskii()
     model.load_tokenizer_model(model_name=model_name) 
     model_loading_status = "Модель успешно загружена!"

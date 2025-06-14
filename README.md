@@ -23,8 +23,6 @@
 export PATH4SEQ="/your/path"
 ```
 
-
-    ```
 4. Запускайте приложение!
     ```console
     foo@bar:~$ python -m answer

@@ -16,6 +16,15 @@
 3. Установите библиотеки
     ```console
     foo@bar:~$ pip install -r requirements.txt
+
+4. Установите переменные окружения
+Specify environment variables:
+```
+# path to the project
+export PATH4SEQ="/your/path"
+```
+
+
     ```
 4. Запускайте приложение!
     ```console

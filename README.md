@@ -20,7 +20,7 @@
 4. Установите переменные окружения
     ```console
     # path to the project
-    export PATH4SEQ="/your/path"
+    foo@bar:~$ export PATH4SEQ="/your/path"
     ```
 
 4. Запускайте приложение!

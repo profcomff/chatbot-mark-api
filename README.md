@@ -18,10 +18,10 @@
     foo@bar:~$ pip install -r requirements.txt
 
 4. Установите переменные окружения
-```console
-# path to the project
-export PATH4SEQ="/your/path"
-```
+    ```console
+    # path to the project
+    export PATH4SEQ="/your/path"
+    ```
 
 4. Запускайте приложение!
     ```console

@@ -1,4 +1,7 @@
 import sys
+import os
+import sys
+import os
 
 sys.path.append("../")
 
@@ -48,14 +51,14 @@ class UserInput(BaseModel):
     text: str
 
         
-data = pd.read_excel("file/answers_search.xlsx")   #заменить на переменную окружения 
-answer_embs = torch.load("file/answer_embeddings.pt") #заменить на переменную окружения 
+data = pd.read_excel(os.environ['ANSWER_DATA'])  
+answer_embs = torch.load(os.environ['EMB_DATA'])
 
 model_loading_status = "Модель загружается..."
 
 try:
     model_loading_status = "Загрузка токенизатора и модели..."
-    model_name = "d0rj/e5-base-en-ru"   #заменить на переменную окружения
+    model_name = os.environ['EMB_MODEL']
     model = Bertinskii()
     model.load_tokenizer_model(model_name=model_name) 
     model_loading_status = "Модель успешно загружена!"
@@ -67,8 +70,15 @@ async def greet(user_input: UserInput):
     if not user_input.text:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
     
-    results = model.find_answer(user_question=user_input.text, answer_embs=answer_embs, answers_df=data)
+    results, scores = model.find_answer(user_question='query: ' + user_input.text, answer_embs=answer_embs, answers_df=data)
+    
+    if len(scores) > 0:
+        max_score = max(scores)
+        if max_score < 0.85:
+            return {"message": "Уточните, пожалуйста, ваш вопрос."}
+    
     return {"results": results}
+
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
@@ -227,6 +237,31 @@ async def read_root():
                 0% {{ transform: rotate(0deg); }}
                 100% {{ transform: rotate(360deg); }}
             }}
+            
+            /* Добавленные стили для сообщений */
+            .warning-message {{
+                padding: 1rem;
+                margin: 1rem 0;
+                border-radius: 8px;
+                background: #fff3e0;
+                color: #e65100;
+                border-left: 4px solid #f57c00;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }}
+            
+            .info-message {{
+                padding: 1rem;
+                margin: 1rem 0;
+                border-radius: 8px;
+                background: #e3f2fd;
+                color: #1976d2;
+                border-left: 4px solid #1976d2;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }}
         </style>
     </head>
     <body>
@@ -256,7 +291,14 @@ async def read_root():
             </div>
             
             <div class="loader" id="loader"></div>
-            <div id="response"></div>
+            <div id="response">
+                <div class="info-message">
+                    <svg style="width:24px;height:24px" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z" />
+                    </svg>
+                    <div>Задайте вопрос в поле выше, и я постараюсь найти ответ</div>
+                </div>
+            </div>
         </div>
 
         <script>
@@ -279,6 +321,19 @@ async def read_root():
                 const responseDiv = document.getElementById('response');
                 const loader = document.getElementById('loader');
                 
+                // Проверка пустого ввода
+                if (!userInput.trim()) {{
+                    responseDiv.innerHTML = `
+                        <div class="warning-message">
+                            <svg style="width:24px;height:24px" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M11 15H13V17H11V15M11 7H13V13H11V7M12 2C6.47 2 2 6.5 2 12A10 10 0 0 0 12 22A10 10 0 0 0 22 12A10 10 0 0 0 12 2M12 20A8 8 0 0 1 4 12A8 8 0 0 1 12 4A8 8 0 0 1 20 12A8 8 0 0 1 12 20Z" />
+                            </svg>
+                            <div>Пожалуйста, введите ваш вопрос</div>
+                        </div>
+                    `;
+                    return;
+                }}
+                
                 responseDiv.innerHTML = '';
                 loader.style.display = 'block';
                 
@@ -292,7 +347,19 @@ async def read_root():
                     const data = await response.json();
                     loader.style.display = 'none';
 
-                    if (data.results) {{
+                    // Обработка случая, когда максимальный score < 0.8
+                    if (data.message) {{
+                        responseDiv.innerHTML = `
+                            <div class="warning-message">
+                                <svg style="width:24px;height:24px" viewBox="0 0 24 24">
+                                    <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                                </svg>
+                                <div>${{escapeHtml(data.message)}}</div>
+                            </div>
+                        `;
+                    }} 
+                    // Обработка результатов
+                    else if (data.results) {{
                         data.results.forEach((result, index) => {{
                             const topicDiv = document.createElement('div');
                             topicDiv.className = 'topic';
@@ -314,12 +381,17 @@ async def read_root():
                             responseDiv.appendChild(topicDiv);
                             responseDiv.appendChild(fullTextDiv);
                         }});
-                    }} else if (data.message) {{
-                        responseDiv.textContent = data.message;
                     }}
                 }} catch (error) {{
                     loader.style.display = 'none';
-                    responseDiv.textContent = 'Ошибка: ' + error.message;
+                    responseDiv.innerHTML = `
+                        <div class="warning-message">
+                            <svg style="width:24px;height:24px" viewBox="0 0 24 24">
+                                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                            </svg>
+                            <div>Произошла ошибка: ${{escapeHtml(error.message)}}</div>
+                        </div>
+                    `;
                 }}
             }}
 
@@ -328,7 +400,14 @@ async def read_root():
             
             document.getElementById('clearInput').addEventListener('click', () => {{
                 document.getElementById('userInput').value = '';
-                document.getElementById('response').innerHTML = '';
+                document.getElementById('response').innerHTML = `
+                    <div class="info-message">
+                        <svg style="width:24px;height:24px" viewBox="0 0 24 24">
+                            <path fill="currentColor" d="M11,9H13V7H11M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M11,17H13V11H11V17Z" />
+                        </svg>
+                        <div>Задайте вопрос в поле выше, и я постараюсь найти ответ</div>
+                    </div>
+                `;
             }});
 
             // Обработка Enter

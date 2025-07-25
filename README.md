@@ -16,7 +16,19 @@
 3. Установите библиотеки
     ```console
     foo@bar:~$ pip install -r requirements.txt
+
+4. Установите переменные окружения
+    ```console
+    # path to the data with answer
+    foo@bar:~$ export ANSWER_DATA="/your/path"
+    # path to the answer embeddings
+    foo@bar:~$ export EMB_DATA="/your/path"
+    # Model from HF
+    foo@bar:~$ export EMB_MODEL="d0rj/e5-base-en-ru"
+    
+    
     ```
+
 4. Запускайте приложение!
     ```console
     foo@bar:~$ python -m answer

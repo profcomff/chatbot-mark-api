@@ -12,10 +12,10 @@ class Bertinskii:
         self.model = None
         self.tokenizer = None
 
-    def load_tokenizer_model(self, model_name):
+    def load_tokenizer_model(self, model_name): #XMLRoberta shows better hitrate than AutoTokenizer and AutoModel
         try:
             self.model_name = model_name
-            self.tokenizer = XLMRobertaTokenizer.from_pretrained(self.model_name) 
+            self.tokenizer = XLMRobertaTokenizer.from_pretrained(self.model_name)
             self.model = XLMRobertaModel.from_pretrained(self.model_name).to(self.device)
             self.model.eval()
             print(f"Loaded {self.model_name} on {self.device}")

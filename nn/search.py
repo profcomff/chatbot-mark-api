@@ -68,8 +68,16 @@ class E5LangChainEmbedder(Embeddings):
     
     
 def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retrivier_k=10):
-        
+    
     bm_25.k = retrivier_k
+    
+#     clean_query = re.sub(r'[^\w\s]', '', query)  
+#     words = clean_query.split()
+    
+#     if len(words) < 3:
+#         raiting = bm_25.invoke(query)[:ensemble_k]
+    
+#     else: 
 
     vector_retriever = vector_store.as_retriever(search_kwargs={"k": retrivier_k})
 
@@ -77,16 +85,16 @@ def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retr
         retrievers=[bm_25, vector_retriever],
         weights=[0.25, 0.75]
     )
-    
-    ensemble_rating = ensemble_retriever.invoke(query)[:ensemble_k]
-    
+
+    raiting = ensemble_retriever.invoke(query)[:ensemble_k]
+
     results = []
-    for res in ensemble_rating:
+    for res in raiting:
         results.append({
         "topic": res.metadata['source'],
         "full_text": res.page_content
     })
-    
-    combined_text = "\n".join(doc.page_content for doc in ensemble_rating)
+
+    combined_text = "\n".join(doc.page_content for doc in raiting)
     
     return results, combined_text

@@ -6,6 +6,13 @@
 
 1. Перейдите в папку проекта
 
+2. Установите сертификаты Минцифры (для работы Гигачат Api)
+    ```console
+    foo@bar:~$ cd llm
+    foo@bar:~$ curl -o russian_trusted_root_ca.crt "https://gu-st.ru/content/Other/doc/russiantrustedca.pem"
+    ```
+
+
 2. Создайте виртуальное окружение командой и активируйте его:
     ```console
     foo@bar:~$ python3 -m venv venv
@@ -17,19 +24,16 @@
     ```console
     foo@bar:~$ pip install -r requirements.txt
 
+
 4. Установите переменные окружения
     ```console
-    # path to the data with answer
-    foo@bar:~$ export ANSWER_DATA="/your/path"
-    # path to the answer embeddings
-    foo@bar:~$ export EMB_DATA="/your/path"
-    # Model from HF
-    foo@bar:~$ export EMB_MODEL="d0rj/e5-base-en-ru"
-    
-    
-    ```
+    # Путь до хрома бд (по дефолту лежит в корневой папке проекта
+    foo@bar:~$ export CHROMA_DIR="/путь/до/папки/chroma_db"
 
-4. Запускайте приложение!
+    # Ключ для гигачат апи
+    foo@bar:~$ export GIGA_KEY_PATH="/путь/до/ключа/gigakey.txt"
+
+5. Запускайте приложение!
     ```console
     foo@bar:~$ python -m answer
     ```

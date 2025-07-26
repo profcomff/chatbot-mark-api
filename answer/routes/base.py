@@ -13,12 +13,17 @@ from fastapi_sqlalchemy import DBSessionMiddleware
 from answer import __version__
 from answer.settings import get_settings
 
-import pandas as pd
+from transformers import XLMRobertaTokenizer, XLMRobertaModel
+from langchain_chroma import Chroma
+from nltk.stem.snowball import SnowballStemmer
+from langchain_core.documents import Document
+from langchain_community.retrievers import BM25Retriever
+from llm.llm import get_answer
 import json
 import torch
-from nn.init import load_model
-from nn.search import Bertinskii
+from nn.search import get_context, E5LangChainEmbedder, preprocess
 import random
+import pickle
 
 
 settings = get_settings()
@@ -49,33 +54,63 @@ app.add_middleware(
 
 class UserInput(BaseModel):
     text: str
+    generate_ai_response: bool = False  
 
         
-data = pd.read_excel(os.environ['ANSWER_DATA'])  
-answer_embs = torch.load(os.environ['EMB_DATA'])
-
-model_loading_status = "Модель загружается..."
-
-try:
-    model_loading_status = "Загрузка токенизатора и модели..."
-    model_name = os.environ['EMB_MODEL']
-    model = Bertinskii()
-    model.load_tokenizer_model(model_name=model_name) 
-    model_loading_status = "Модель успешно загружена!"
-except Exception as e:
-    model_loading_status = f"Ошибка загрузки модели: {str(e)}"
+@app.on_event("startup")
+def init_resources():    
+    with open(settings.GIGA_KEY_PATH, "r") as f:
+        app.state.credentials = f.read().strip()
     
+    app.state.tokenizer = XLMRobertaTokenizer.from_pretrained("d0rj/e5-base-en-ru", use_cache=False)
+    app.state.model = XLMRobertaModel.from_pretrained("d0rj/e5-base-en-ru", use_cache=False)
+    
+    embedder = E5LangChainEmbedder(
+        tokenizer=app.state.tokenizer,
+        model=app.state.model,
+    )
+    
+    app.state.vector_store = Chroma(
+        collection_name="docs",
+        embedding_function=embedder,
+        persist_directory=settings.CHROMA_DIR
+    )
+    
+    all_docs = app.state.vector_store.get(include=["documents", "metadatas"])
+    documents = [
+        Document(page_content=doc_text, metadata=metadata)
+        for doc_text, metadata in zip(all_docs["documents"], all_docs["metadatas"])
+    ]
+    
+    app.state.bm25_retriever = BM25Retriever.from_documents(
+        documents, 
+        preprocess_func=preprocess
+    )
+        
+        
 @app.post("/greet")
-async def greet(user_input: UserInput):
+async def generate_response(user_input: UserInput):
     if not user_input.text:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
     
-    results, scores = model.find_answer(user_question='query: ' + user_input.text, answer_embs=answer_embs, answers_df=data)
+    results, combined_text = get_context(
+        query=user_input.text,
+        tokenizer=app.state.tokenizer,
+        model=app.state.model,
+        bm_25=app.state.bm25_retriever,
+        vector_store=app.state.vector_store,
+        ensemble_k=settings.ensemble_k,
+        retrivier_k=settings.retrivier_k
+    )
     
-    if len(scores) > 0:
-        max_score = max(scores)
-        if max_score < 0.85:
-            return {"message": "Уточните, пожалуйста, ваш вопрос."}
+    if user_input.generate_ai_response:
+        ai_answer = get_answer(
+            context=combined_text, 
+            question=user_input.text, 
+            credentials=app.state.credentials,
+            settings=settings
+        )
+        return {"results": results, "ai_answer": ai_answer}
     
     return {"results": results}
 
@@ -170,6 +205,16 @@ async def read_root():
                 opacity: 0.9;
                 transform: translateY(-1px);
             }}
+
+            #aiResponse {{
+                background: #4CAF50;
+                color: white;
+            }}
+
+            #aiResponse:hover {{
+                opacity: 0.9;
+                transform: translateY(-1px);
+            }}
             
             #clearInput {{
                 background: #e0e0e0;
@@ -215,6 +260,14 @@ async def read_root():
                 border-radius: 8px;
                 white-space: pre-wrap;
                 animation: fadeIn 0.3s ease;
+            }}
+
+            .ai-answer {{
+                padding: 1rem;
+                margin: 1rem 0;
+                background: #e8f5e9;
+                border-radius: 8px;
+                border-left: 4px solid #4CAF50;
             }}
             
             @keyframes fadeIn {{
@@ -266,9 +319,7 @@ async def read_root():
     </head>
     <body>
         <div class="container">
-            <h1>🤖 Марк</h1>
-            <div id="modelStatus">📦 {model_loading_status}</div>
-            
+            <h1>🤖 Марк</h1>            
             <textarea 
                 id="userInput" 
                 placeholder="Введите ваш вопрос..."
@@ -280,7 +331,13 @@ async def read_root():
                     <svg style="width:20px;height:20px" viewBox="0 0 24 24">
                         <path fill="currentColor" d="M2,21L23,12L2,3V10L17,12L2,14V21Z" />
                     </svg>
-                    Отправить
+                    Поиск документов
+                </button>
+                <button id="aiResponse">
+                    <svg style="width:20px;height:20px" viewBox="0 0 24 24">
+                        <path fill="currentColor" d="M18,16H6V4H18M18,2H6A2,2 0 0,0 4,4V16A2,2 0 0,0 6,18H18A2,2 0 0,0 20,16V4A2,2 0 0,0 18,2M22,6V20H24V6H22M11,12H13V14H11V12M11,8H13V10H11V8M11,16H13V18H11V16Z" />
+                    </svg>
+                    Ответ AI
                 </button>
                 <button id="clearInput">
                     <svg style="width:20px;height:20px" viewBox="0 0 24 24">
@@ -316,7 +373,7 @@ async def read_root():
                 fullTextDiv.style.display = fullTextDiv.style.display === 'none' ? 'block' : 'none';
             }}
 
-            async function handleSubmit() {{
+            async function handleSubmit(generateAI = false) {{
                 const userInput = document.getElementById('userInput').value;
                 const responseDiv = document.getElementById('response');
                 const loader = document.getElementById('loader');
@@ -341,7 +398,10 @@ async def read_root():
                     const response = await fetch('/greet', {{
                         method: 'POST',
                         headers: {{ 'Content-Type': 'application/json' }},
-                        body: JSON.stringify({{ text: userInput }})
+                        body: JSON.stringify({{ 
+                            text: userInput,
+                            generate_ai_response: generateAI 
+                        }})
                     }});
 
                     const data = await response.json();
@@ -360,6 +420,18 @@ async def read_root():
                     }} 
                     // Обработка результатов
                     else if (data.results) {{
+                        // Если есть AI ответ - показываем его первым
+                        if (data.ai_answer) {{
+                            const aiDiv = document.createElement('div');
+                            aiDiv.className = 'ai-answer';
+                            aiDiv.innerHTML = `
+                                <div style="color: #2E7D32; margin-bottom: 0.5rem;">🤖 Ответ AI:</div>
+                                <div>${{escapeHtml(data.ai_answer)}}</div>
+                            `;
+                            responseDiv.appendChild(aiDiv);
+                        }}
+
+                        // Показываем результаты поиска
                         data.results.forEach((result, index) => {{
                             const topicDiv = document.createElement('div');
                             topicDiv.className = 'topic';
@@ -396,7 +468,8 @@ async def read_root():
             }}
 
             // Обработчики событий
-            document.getElementById('sendRequest').addEventListener('click', handleSubmit);
+            document.getElementById('sendRequest').addEventListener('click', () => handleSubmit(false));
+            document.getElementById('aiResponse').addEventListener('click', () => handleSubmit(true));
             
             document.getElementById('clearInput').addEventListener('click', () => {{
                 document.getElementById('userInput').value = '';
@@ -414,7 +487,7 @@ async def read_root():
             document.getElementById('userInput').addEventListener('keypress', (e) => {{
                 if (e.key === 'Enter' && !e.shiftKey) {{
                     e.preventDefault();
-                    handleSubmit();
+                    handleSubmit(false);
                 }}
             }});
         </script>

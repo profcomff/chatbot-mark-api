@@ -1,3 +1,5 @@
 __pycache__/
 key.json
 .DS_Store
+gigakey.txt
+*.crt

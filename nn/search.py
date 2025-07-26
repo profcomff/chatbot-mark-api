@@ -4,18 +4,27 @@ from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
 from nltk.stem.snowball import SnowballStemmer
 from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
 import re
 from tqdm import tqdm
 
 
 _STEMMER = SnowballStemmer("russian")
-_PREPROCESS_REGEX = re.compile(r'[^а-яё\s]')
-
+_PREPROCESS_REGEX = re.compile(r'[^а-яё\s]')  
+_STOP_WORDS = set(stopwords.words('russian'))
+_BANNED_WORDS = {'мгу', 'физфак', 'физический', 'университет'}
+_STEMMED_BANNED_WORDS = {_STEMMER.stem(w) for w in _BANNED_WORDS}
 
 def preprocess(text):
     cleaned = _PREPROCESS_REGEX.sub('', text.lower())
+    
     words = word_tokenize(cleaned, language="russian")
-    return [_STEMMER.stem(word) for word in words if word.strip()]
+    
+    filtered_tokens = [word for word in words if word.strip() and word not in _STOP_WORDS]
+    
+    stemmed_words = [_STEMMER.stem(word) for word in filtered_tokens]
+    
+    return [word for word in stemmed_words if word not in _STEMMED_BANNED_WORDS]
 
 
 class E5LangChainEmbedder(Embeddings):

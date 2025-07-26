@@ -183,7 +183,7 @@ llvmlite==0.43.0
 locket==1.0.0
 logical-unification==0.4.6
 lxml==5.4.0
-Mako==1.1.3
+Mako==1.2.2
 marisa-trie==1.2.1
 Markdown==3.8.2
 markdown-it-py==3.0.0

@@ -1,83 +1,100 @@
-import pandas as pd
-from transformers import XLMRobertaTokenizer, XLMRobertaModel
 import torch
-import torch.nn.functional as F
-from torch import Tensor
+from langchain_core.embeddings import Embeddings
+from langchain_community.retrievers import BM25Retriever
+from langchain.retrievers import EnsembleRetriever
+from nltk.stem.snowball import SnowballStemmer
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+import re
 from tqdm import tqdm
 
-class Bertinskii:
-    def __init__(self, device: str = 'cpu'):
-        self.model_name = None
-        self.device = device
-        self.model = None
-        self.tokenizer = None
 
-    def load_tokenizer_model(self, model_name): #XMLRoberta shows better hitrate than AutoTokenizer and AutoModel
-        try:
-            self.model_name = model_name
-            self.tokenizer = XLMRobertaTokenizer.from_pretrained(self.model_name) 
-            self.model = XLMRobertaModel.from_pretrained(self.model_name).to(self.device) 
-            self.model.eval()
-            print(f"Loaded {self.model_name} on {self.device}")
-        except Exception as e:
-            print(f"Load error: {e}")
-            raise
+_STEMMER = SnowballStemmer("russian")
+_PREPROCESS_REGEX = re.compile(r'[^а-яё\s]')  
+_STOP_WORDS = set(stopwords.words('russian'))
+_BANNED_WORDS = {'мгу', 'физфак', 'физический', 'университет'}
+_STEMMED_BANNED_WORDS = {_STEMMER.stem(w) for w in _BANNED_WORDS}
+
+def preprocess(text):
+    cleaned = _PREPROCESS_REGEX.sub('', text.lower())
+    
+    words = word_tokenize(cleaned, language="russian")
+    
+    filtered_tokens = [word for word in words if word.strip() and word not in _STOP_WORDS]
+    
+    stemmed_words = [_STEMMER.stem(word) for word in filtered_tokens]
+    
+    return [word for word in stemmed_words if word not in _STEMMED_BANNED_WORDS]
+
+
+class E5LangChainEmbedder(Embeddings):
+    def __init__(self, tokenizer, model, embed_batch_size=8, chroma_batch_size=1000):
+        self.tokenizer = tokenizer
+        self.model = model
+        self.embed_batch_size = embed_batch_size
+        self.chroma_batch_size = chroma_batch_size
+        self.model.eval()
 
     def _average_pool(self, last_hidden_states, attention_mask):
         last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
         return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
-    def compute_embeddings(self, texts, batch_size=8):
-        if not self.model or not self.tokenizer:
-            raise RuntimeError("Call load_tokenizer_model() first")
-
+    def embed_documents(self, texts):
         all_embeddings = []
-        batches = range(0, len(texts), batch_size)
-
-        for i in tqdm(batches, desc="Processing batches", unit="batch"):
-            batch = texts[i:i+batch_size]
-            inputs = self.tokenizer(
-                batch,
+        for i in tqdm(range(0, len(texts), self.embed_batch_size),
+                     desc="Вычисление эмбеддингов", unit="batch"):
+            batch_texts = texts[i:i+self.embed_batch_size]
+            batch_dict = self.tokenizer(
+                batch_texts,
                 max_length=512,
                 padding=True,
                 truncation=True,
-                return_tensors="pt"
-            ).to(self.device)
+                return_tensors='pt'
+            )
 
             with torch.no_grad():
-                outputs = self.model(**inputs)
+                outputs = self.model(**batch_dict)
+                embeddings = self._average_pool(
+                    outputs.last_hidden_state,
+                    batch_dict['attention_mask']
+                )
+                embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+                all_embeddings.extend(embeddings.cpu().tolist())
 
-            embeddings = self._average_pool(outputs.last_hidden_state, inputs['attention_mask'])
-            all_embeddings.append(F.normalize(embeddings, p=2, dim=1))
+        return all_embeddings
 
-        return torch.cat(all_embeddings, dim=0).cpu()
+    def embed_query(self, text):
+        return self.embed_documents([text])[0]
+    
+    
+def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retrivier_k=10):
+    
+    bm_25.k = retrivier_k
+    
+#     clean_query = re.sub(r'[^\w\s]', '', query)  
+#     words = clean_query.split()
+    
+#     if len(words) < 3:
+#         raiting = bm_25.invoke(query)[:ensemble_k]
+    
+#     else: 
 
-    def find_answer(self, user_question: str, answer_embs: torch.tensor, answers_df: pd.DataFrame, topk: int = 3) -> str:
-        query_text = "query:" + user_question
+    vector_retriever = vector_store.as_retriever(search_kwargs={"k": retrivier_k})
 
-        query_input = self.tokenizer(
-            [query_text],
-            max_length=512,
-            padding=True,
-            truncation=True,
-            return_tensors="pt"
-        ).to(self.device)
+    ensemble_retriever = EnsembleRetriever(
+        retrievers=[bm_25, vector_retriever],
+        weights=[0.25, 0.75]
+    )
 
-        with torch.no_grad():
-            query_output = self.model(**query_input)
+    raiting = ensemble_retriever.invoke(query)[:ensemble_k]
 
-        query_emb = self._average_pool(query_output.last_hidden_state, query_input['attention_mask'])
-        query_emb = F.normalize(query_emb, p=2, dim=1)
+    results = []
+    for res in raiting:
+        results.append({
+        "topic": res.metadata['source'],
+        "full_text": res.page_content
+    })
 
-        scores = answer_embs @ query_emb.T
-        top_indices = torch.topk(scores.flatten(), topk).indices.cpu().numpy()
-
-        results = []
-        for idx in top_indices:
-            row = answers_df.iloc[idx]
-            results.append({
-            "topic": row['topik_name'],
-            "full_text": row['answer']
-        })
-
-        return results, scores
+    combined_text = "\n".join(doc.page_content for doc in raiting)
+    
+    return results, combined_text

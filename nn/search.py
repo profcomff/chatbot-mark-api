@@ -42,7 +42,7 @@ class E5LangChainEmbedder(Embeddings):
     def embed_documents(self, texts):
         all_embeddings = []
         for i in tqdm(range(0, len(texts), self.embed_batch_size),
-                     desc="Вычисление эмбеддингов", unit="batch"):
+                     desc="Вычисление эмбеддингов", unit="batch", disable=True):
             batch_texts = texts[i:i+self.embed_batch_size]
             batch_dict = self.tokenizer(
                 batch_texts,

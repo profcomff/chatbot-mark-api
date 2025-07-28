@@ -28,29 +28,46 @@ def preprocess(text):
 
 
 class E5LangChainEmbedder(Embeddings):
-    def __init__(self, tokenizer, model, embed_batch_size=8, chroma_batch_size=1000):
+    def __init__(
+        self,
+        tokenizer,
+        model,
+        device='cpu',
+        embed_batch_size=8,
+        chroma_batch_size=1000,
+        passage_prefix="",
+        query_prefix=""  
+    ):
         self.tokenizer = tokenizer
-        self.model = model
+        self.model = model.to(device)
+        self.device = device
         self.embed_batch_size = embed_batch_size
         self.chroma_batch_size = chroma_batch_size
+        self.passage_prefix = passage_prefix
+        self.query_prefix = query_prefix
         self.model.eval()
 
-    def _average_pool(self, last_hidden_states, attention_mask):
+    def _average_pool(self, last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
         last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
         return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
     def embed_documents(self, texts):
+        if self.passage_prefix:
+            prefixed_texts = [self.passage_prefix + text for text in texts]
+        else:
+            prefixed_texts = texts
+
         all_embeddings = []
-        for i in tqdm(range(0, len(texts), self.embed_batch_size),
-                     desc="Вычисление эмбеддингов", unit="batch", disable=True):
-            batch_texts = texts[i:i+self.embed_batch_size]
+        for i in tqdm(range(0, len(prefixed_texts), self.embed_batch_size),
+                     desc="Вычисление эмбеддингов", unit="batch"):
+            batch_texts = prefixed_texts[i:i+self.embed_batch_size]
             batch_dict = self.tokenizer(
                 batch_texts,
                 max_length=512,
                 padding=True,
                 truncation=True,
                 return_tensors='pt'
-            )
+            ).to(self.device)
 
             with torch.no_grad():
                 outputs = self.model(**batch_dict)
@@ -64,7 +81,11 @@ class E5LangChainEmbedder(Embeddings):
         return all_embeddings
 
     def embed_query(self, text):
-        return self.embed_documents([text])[0]
+        if self.query_prefix:
+            prefixed_text = self.query_prefix + text
+        else:
+            prefixed_text = text
+        return self.embed_documents([prefixed_text])[0]
     
     
 def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retrivier_k=10):

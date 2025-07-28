@@ -39,25 +39,25 @@
     ```
 
 ## Запуск через Docker
-    ```console
-    # Установка сертификатов
-    cd llm
-    curl -o russian_trusted_root_ca.crt "https://gu-st.ru/content/Other/doc/russiantrustedca.pem"
+```console
+# Установка сертификатов
+cd llm
+curl -o russian_trusted_root_ca.crt "https://gu-st.ru/content/Other/doc/russiantrustedca.pem"
 
-    # Сборка образа
-    docker build -t my-fastapi-langchain .
+# Сборка образа
+docker build -t my-fastapi-langchain .
 
-    # Поднятие контейнера
-    docker run -d \
-      -p 127.0.0.1:8000:8000 \
-      --name my-fastapi-langchain \
-      -v "/Локальный/путь/до/chroma_db:/app/chroma_db" \
-      -v "/Локальный/путь/до/gigakey.txt:/app/gigakey.txt:ro" \
-      -e CHROMA_DIR="/app/chroma_db" \
-      -e GIGA_KEY_PATH="/app/gigakey.txt" \
-      -e APP_MODULE="answer.routes.base:app" \
-      -e PYTHONPATH="/app" \
-      my-fastapi-langchain   
+# Поднятие контейнера
+docker run -d \
+  -p 127.0.0.1:8000:8000 \
+  --name my-fastapi-langchain \
+  -v "/Локальный/путь/до/chroma_db:/app/chroma_db" \
+  -v "/Локальный/путь/до/gigakey.txt:/app/gigakey.txt:ro" \
+  -e CHROMA_DIR="/app/chroma_db" \
+  -e GIGA_KEY_PATH="/app/gigakey.txt" \
+  -e APP_MODULE="answer.routes.base:app" \
+  -e PYTHONPATH="/app" \
+  my-fastapi-langchain   
 ```
 
 

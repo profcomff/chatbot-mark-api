@@ -36,7 +36,8 @@ class E5LangChainEmbedder(Embeddings):
         embed_batch_size=8,
         chroma_batch_size=1000,
         passage_prefix="",
-        query_prefix=""  
+        query_prefix="",
+        show_progress=True,  
     ):
         self.tokenizer = tokenizer
         self.model = model.to(device)
@@ -45,21 +46,27 @@ class E5LangChainEmbedder(Embeddings):
         self.chroma_batch_size = chroma_batch_size
         self.passage_prefix = passage_prefix
         self.query_prefix = query_prefix
+        self.show_progress = show_progress
         self.model.eval()
 
     def _average_pool(self, last_hidden_states: Tensor, attention_mask: Tensor) -> Tensor:
         last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
         return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
-    def embed_documents(self, texts):
-        if self.passage_prefix:
-            prefixed_texts = [self.passage_prefix + text for text in texts]
-        else:
-            prefixed_texts = texts
+    def embed_documents(self, texts, show_progress: bool = None):
+        # выбор, показывать ли tqdm
+        if show_progress is None:
+            show_progress = self.show_progress
+
+        # добавляем prefix к документам, если он есть
+        prefixed_texts = [self.passage_prefix + t for t in texts] if self.passage_prefix else texts
 
         all_embeddings = []
-        for i in tqdm(range(0, len(prefixed_texts), self.embed_batch_size),
-                     desc="Вычисление эмбеддингов", unit="batch"):
+        iterator = range(0, len(prefixed_texts), self.embed_batch_size)
+        if show_progress:
+            iterator = tqdm(iterator, desc="Вычисление эмбеддингов", unit="batch")
+
+        for i in iterator:
             batch_texts = prefixed_texts[i:i+self.embed_batch_size]
             batch_dict = self.tokenizer(
                 batch_texts,
@@ -71,21 +78,15 @@ class E5LangChainEmbedder(Embeddings):
 
             with torch.no_grad():
                 outputs = self.model(**batch_dict)
-                embeddings = self._average_pool(
-                    outputs.last_hidden_state,
-                    batch_dict['attention_mask']
-                )
-                embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
-                all_embeddings.extend(embeddings.cpu().tolist())
+                embs = self._average_pool(outputs.last_hidden_state, batch_dict['attention_mask'])
+                embs = torch.nn.functional.normalize(embs, p=2, dim=1)
+                all_embeddings.extend(embs.cpu().tolist())
 
         return all_embeddings
 
     def embed_query(self, text):
-        if self.query_prefix:
-            prefixed_text = self.query_prefix + text
-        else:
-            prefixed_text = text
-        return self.embed_documents([prefixed_text])[0]
+        pref = (self.query_prefix + text) if self.query_prefix else text
+        return self.embed_documents([pref], show_progress=False)[0]
     
     
 def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retrivier_k=10):

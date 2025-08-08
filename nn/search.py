@@ -42,7 +42,7 @@ class E5LangChainEmbedder(Embeddings):
         self.disable_tqdm = disable_tqdm
         self.model.eval()
 
-    def _average_pool(self, last_hidden_states: Tensor, attention_mask: Tensor):
+    def _average_pool(self, last_hidden_states, attention_mask):
         last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
         return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
@@ -81,9 +81,7 @@ class E5LangChainEmbedder(Embeddings):
     
     
 def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retrivier_k=10):
-    
     bm_25.k = retrivier_k
-    
 #     clean_query = re.sub(r'[^\w\s]', '', query)  
 #     words = clean_query.split()
     
@@ -91,7 +89,6 @@ def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retr
 #         raiting = bm_25.invoke(query)[:ensemble_k]
     
 #     else: 
-
     vector_retriever = vector_store.as_retriever(search_kwargs={"k": retrivier_k})
 
     ensemble_retriever = EnsembleRetriever(

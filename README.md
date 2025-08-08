@@ -37,6 +37,10 @@
     ```console
     python -m answer
     ```
+*.  Если возникает ошибка с punkt_tab
+    ```console
+    python -m nltk.downloader punkt_tab
+    ```
 
 ## Запуск через Docker
 ```console

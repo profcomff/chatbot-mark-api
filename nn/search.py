@@ -29,7 +29,6 @@ class E5LangChainEmbedder(Embeddings):
         model,
         device: str = 'cpu',
         embed_batch_size: int = 8,
-        chroma_batch_size: int = 1000,
         add_prefix: bool = False,
         disable_tqdm: bool = False
     ):
@@ -37,7 +36,6 @@ class E5LangChainEmbedder(Embeddings):
         self.model = model.to(device)
         self.device = device
         self.embed_batch_size = embed_batch_size
-        self.chroma_batch_size = chroma_batch_size
         self.add_prefix = add_prefix
         self.disable_tqdm = disable_tqdm
         self.model.eval()
@@ -75,9 +73,27 @@ class E5LangChainEmbedder(Embeddings):
         return all_embeddings
 
     def embed_query(self, text):
+        # Добавляем префикс "query: " только для запросов
         if self.add_prefix:
             text = "query: " + text
-        return self.embed_documents([text])[0]
+        
+        # Обрабатываем запрос отдельно, без вызова embed_documents
+        batch_dict = self.tokenizer(
+            [text],
+            max_length=512,
+            padding=True,
+            truncation=True,
+            return_tensors='pt'
+        ).to(self.device)
+        
+        with torch.no_grad():
+            outputs = self.model(**batch_dict)
+            embeddings = self._average_pool(
+                outputs.last_hidden_state,
+                batch_dict['attention_mask']
+            )
+            embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+            return embeddings.cpu().tolist()[0]
     
     
 def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retrivier_k=10):

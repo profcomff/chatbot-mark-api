@@ -124,3 +124,13 @@ def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retr
     combined_text = "\n".join(doc.page_content for doc in raiting)
     
     return results, combined_text
+
+
+# def test_func(text):
+#      'фунция для примера'
+#      dict_of_keys = {'Профком': [1, 7, 89]}
+
+#      if len(text) < 3 and any(text) in dict_of_keys.keys():
+#           context = key_words_search()
+#      else:
+#          context = semantinc_search()

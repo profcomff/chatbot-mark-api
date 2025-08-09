@@ -1,5 +1,5 @@
 import sys
-# import os
+import os
 
 sys.path.append("../")
 
@@ -17,11 +17,11 @@ from nltk.stem.snowball import SnowballStemmer
 from langchain_core.documents import Document
 from langchain_community.retrievers import BM25Retriever
 from llm.llm import get_answer
-# import json
-# import torch
+import json
+import torch
 from nn.search import get_context, E5LangChainEmbedder, preprocess
-# import random
-# import pickle
+import random
+import pickle
 
 
 settings = get_settings()

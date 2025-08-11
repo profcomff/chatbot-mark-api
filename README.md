@@ -1,43 +1,44 @@
 # Ассистент
 
--
-
 ## Запуск
 
 1. Перейдите в папку проекта
 
-2. Установите сертификаты Минцифры (для работы Гигачат Api)
+2. Установите сертификаты Минцифры (для работы Гигачат API)
     ```console
     cd llm
     curl -o russian_trusted_root_ca.crt "https://gu-st.ru/content/Other/doc/russiantrustedca.pem"
     ```
 
-
-2. Создайте виртуальное окружение командой и активируйте его:
+3. Создайте виртуальное окружение и активируйте его:
     ```console
     python3 -m venv venv
     source ./venv/bin/activate  # На MacOS и Linux
-    venv\Scripts\activate  # На Windows
+    venv\Scripts\activate     # На Windows
     ```
 
-3. Установите библиотеки
+4. Установите зависимости
     ```console
     pip install -r requirements.txt
-
-
-4. Установите переменные окружения
+    ```
     ```console
-    # Путь до хрома бд (по дефолту лежит в корневой папке проекта)
+    python -m nltk.downloader punkt_tab
+    ```
+
+5. Установите переменные окружения
+    ```console
+    # Путь до chroma db (по умолчанию лежит в корневой папке проекта)
     export CHROMA_DIR="/путь/до/папки/chroma_db"
 
-    # Ключ для гигачат апи
+    # Ключ для гигачат API
     export GIGA_KEY_PATH="/путь/до/ключа/gigakey.txt"
+    ```
 
-5. Запускайте приложение!
+6. Запустите приложение
     ```console
     python -m answer
     ```
-
+    
 ## Запуск через Docker
 ```console
 # Установка сертификатов

@@ -17,22 +17,27 @@ _STEMMED_BANNED_WORDS = {_STEMMER.stem(w) for w in _BANNED_WORDS}
 
 def preprocess(text):
     cleaned = _PREPROCESS_REGEX.sub('', text.lower())
-    
     words = word_tokenize(cleaned, language="russian")
-    
     filtered_tokens = [word for word in words if word.strip() and word not in _STOP_WORDS]
-    
     stemmed_words = [_STEMMER.stem(word) for word in filtered_tokens]
-    
     return [word for word in stemmed_words if word not in _STEMMED_BANNED_WORDS]
 
-
 class E5LangChainEmbedder(Embeddings):
-    def __init__(self, tokenizer, model, embed_batch_size=8, chroma_batch_size=1000):
+    def __init__(
+        self,
+        tokenizer,
+        model,
+        device: str = 'cpu',
+        embed_batch_size: int = 8,
+        add_prefix: bool = False,
+        disable_tqdm: bool = False
+    ):
         self.tokenizer = tokenizer
-        self.model = model
+        self.model = model.to(device)
+        self.device = device
         self.embed_batch_size = embed_batch_size
-        self.chroma_batch_size = chroma_batch_size
+        self.add_prefix = add_prefix
+        self.disable_tqdm = disable_tqdm
         self.model.eval()
 
     def _average_pool(self, last_hidden_states, attention_mask):
@@ -40,17 +45,21 @@ class E5LangChainEmbedder(Embeddings):
         return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
 
     def embed_documents(self, texts):
+        if self.add_prefix:
+            texts = ["passage: " + t for t in texts]
+
         all_embeddings = []
         for i in tqdm(range(0, len(texts), self.embed_batch_size),
-                     desc="Вычисление эмбеддингов", unit="batch", disable=True):
-            batch_texts = texts[i:i+self.embed_batch_size]
+                     desc="Вычисление эмбеддингов", unit="batch",
+                     disable=self.disable_tqdm):
+            batch_texts = texts[i:i + self.embed_batch_size]
             batch_dict = self.tokenizer(
                 batch_texts,
                 max_length=512,
                 padding=True,
                 truncation=True,
                 return_tensors='pt'
-            )
+            ).to(self.device)
 
             with torch.no_grad():
                 outputs = self.model(**batch_dict)
@@ -64,21 +73,29 @@ class E5LangChainEmbedder(Embeddings):
         return all_embeddings
 
     def embed_query(self, text):
-        return self.embed_documents([text])[0]
+        if self.add_prefix:
+            text = "query: " + text
+        
+        batch_dict = self.tokenizer(
+            [text],
+            max_length=512,
+            padding=True,
+            truncation=True,
+            return_tensors='pt'
+        ).to(self.device)
+        
+        with torch.no_grad():
+            outputs = self.model(**batch_dict)
+            embeddings = self._average_pool(
+                outputs.last_hidden_state,
+                batch_dict['attention_mask']
+            )
+            embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
+            return embeddings.cpu().tolist()[0]
     
     
 def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retrivier_k=10):
-    
     bm_25.k = retrivier_k
-    
-#     clean_query = re.sub(r'[^\w\s]', '', query)  
-#     words = clean_query.split()
-    
-#     if len(words) < 3:
-#         raiting = bm_25.invoke(query)[:ensemble_k]
-    
-#     else: 
-
     vector_retriever = vector_store.as_retriever(search_kwargs={"k": retrivier_k})
 
     ensemble_retriever = EnsembleRetriever(

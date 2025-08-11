@@ -23,6 +23,9 @@
     ```console
     pip install -r requirements.txt
     ```
+    ```console
+    python -m nltk.downloader punkt_tab
+    ```
 
 5. Установите переменные окружения
     ```console
@@ -37,12 +40,7 @@
     ```console
     python -m answer
     ```
-
-* Если возникает ошибка с `punkt_tab`:
-    ```console
-    python -m nltk.downloader punkt_tab
-    ```
-
+    
 ## Запуск через Docker
 ```console
 # Установка сертификатов

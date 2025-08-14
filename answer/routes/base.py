@@ -19,7 +19,7 @@ from langchain_community.retrievers import BM25Retriever
 from llm.llm import get_answer
 import json
 import torch
-from nn.search import get_context, E5LangChainEmbedder, preprocess
+from nn.search import get_context, E5LangChainEmbedder, preprocess, generate_keywords_dict
 import random
 import pickle
 
@@ -84,7 +84,13 @@ def init_resources():
         documents, 
         preprocess_func=preprocess
     )
-        
+
+    # Generate keywords dictionary
+    app.state.keywords_dict = generate_keywords_dict(
+        excel_path="file/database_v2_key_words.xlsx", 
+        output_json_path="file/key_words_dict.json"
+    )
+       
         
 @app.post("/greet")
 async def generate_response(user_input: UserInput):
@@ -93,12 +99,12 @@ async def generate_response(user_input: UserInput):
     
     results, combined_text = get_context(
         query=user_input.text,
-        tokenizer=app.state.tokenizer,
-        model=app.state.model,
+        key_words_dict=app.state.keywords_dict,
         bm_25=app.state.bm25_retriever,
         vector_store=app.state.vector_store,
         ensemble_k=settings.ensemble_k,
-        retrivier_k=settings.retrivier_k
+        retriever_k=settings.retrivier_k,
+        verbose=True
     )
     
     if user_input.generate_ai_response:

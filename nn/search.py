@@ -7,6 +7,10 @@ from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 import re
 from tqdm import tqdm
+import json #added for key_words
+
+from openpyxl import load_workbook #added for keywords
+from collections import defaultdict #added for keywords
 
 
 _STEMMER = SnowballStemmer("russian")
@@ -73,11 +77,9 @@ class E5LangChainEmbedder(Embeddings):
         return all_embeddings
 
     def embed_query(self, text):
-        # Добавляем префикс "query: " только для запросов
         if self.add_prefix:
             text = "query: " + text
         
-        # Обрабатываем запрос отдельно, без вызова embed_documents
         batch_dict = self.tokenizer(
             [text],
             max_length=512,
@@ -96,28 +98,70 @@ class E5LangChainEmbedder(Embeddings):
             return embeddings.cpu().tolist()[0]
     
     
-def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retrivier_k=10):
-    bm_25.k = retrivier_k
-    vector_retriever = vector_store.as_retriever(search_kwargs={"k": retrivier_k})
+# def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retrivier_k=10):
+#     bm_25.k = retrivier_k
+#     vector_retriever = vector_store.as_retriever(search_kwargs={"k": retrivier_k})
 
-    ensemble_retriever = EnsembleRetriever(
-        retrievers=[bm_25, vector_retriever],
-        weights=[0.5, 0.5]
-    )
+#     ensemble_retriever = EnsembleRetriever(
+#         retrievers=[bm_25, vector_retriever],
+#         weights=[0.5, 0.5]
+#     )
 
-    raiting = ensemble_retriever.invoke(query)[:ensemble_k]
+#     raiting = ensemble_retriever.invoke(query)[:ensemble_k]
 
-    results = []
-    for res in raiting:
-        results.append({
-        "topic": res.metadata['source'],
-        "full_text": res.page_content
-    })
+#     results = []
+#     for res in raiting:
+#         results.append({
+#         "topic": res.metadata['source'],
+#         "full_text": res.page_content
+#     })
 
-    combined_text = "\n".join(doc.page_content for doc in raiting)
+#     combined_text = "\n".join(doc.page_content for doc in raiting)
     
-    return results, combined_text
+#     return results, combined_text
 
+
+#---added for keywords---
+def generate_keywords_dict(excel_path, output_json_path=None):
+    try:
+        workbook = load_workbook(excel_path)
+        sheet = workbook.active
+        keywords_dict = defaultdict(list)
+
+        for row in sheet.iter_rows(min_row=2, values_only=True):
+            if len(row) < 5:
+                continue
+
+            topic_id = str(row[3]).strip()
+            key_words_value = row[4]
+
+            if key_words_value is None or not str(key_words_value).strip():
+                continue
+
+            keywords = [
+                kw.strip().lower()
+                for kw in str(key_words_value).split(",")
+                if kw.strip()
+            ]
+
+            for kw in keywords:
+                keywords_dict[kw].append(topic_id)
+
+        result = dict(keywords_dict)
+
+        # Выводим, сколько ключевых слов найдено
+        print(f"Dictionary created: {len(result)} keywords")
+
+        if output_json_path:
+            with open(output_json_path, 'w', encoding='utf-8') as f:
+                json.dump(result, f, ensure_ascii=False, indent=2)
+            print(f"Dictionary saved to {output_json_path}")
+
+        return result
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return {}
 
 # def test_func(text):
 #      'фунция для примера'
@@ -127,3 +171,71 @@ def get_context(query, tokenizer, model, bm_25, vector_store, ensemble_k=5, retr
 #           context = key_words_search()
 #      else:
 #          context = semantinc_search()
+
+def key_words_search(query, key_words_dict, vector_store, ensemble_k=5, verbose=False):
+    words = query.lower().split()
+    matching_ids = set()
+    
+    # Собираем ID тем, соответствующих ключевым словам
+    for word in words:
+        if word in key_words_dict:
+            matching_ids.update(int(excel_id) for excel_id in key_words_dict[word])
+        
+    if verbose:
+        print(f"Key words search: Found {len(matching_ids)} matching documents")
+    
+    # Создаём фильтр по ID
+    filter_criteria = {"id": {"$in": list(matching_ids)}} 
+    
+    docs = vector_store.as_retriever(
+        search_kwargs={"filter": filter_criteria, "k": len(matching_ids)}
+    ).get_relevant_documents("")
+    
+    # Форматируем результат
+    results = [
+        {"topic": doc.metadata["source"], "full_text": doc.page_content}
+        for doc in docs[:ensemble_k]
+    ]
+    combined_text = "\n".join(doc.page_content for doc in docs)
+    
+    return results, combined_text
+
+
+def semantic_search(query, bm_25, vector_store, ensemble_k=5, retriever_k=10, verbose=False):
+    if verbose:
+        print("Semantic search: Using hybrid retrieval (BM25 + vector search)")
+    
+    bm_25.k = retriever_k
+    vector_retriever = vector_store.as_retriever(search_kwargs={"k": retriever_k})
+
+    ensemble_retriever = EnsembleRetriever(
+        retrievers=[bm_25, vector_retriever],
+        weights=[0.5, 0.5]
+    )
+
+    rankings = ensemble_retriever.invoke(query)[:ensemble_k]
+
+    results = []
+    for res in rankings:
+        results.append({
+            "topic": res.metadata['source'],
+            "full_text": res.page_content
+        })
+
+    combined_text = "\n".join(doc.page_content for doc in rankings)
+    
+    return results, combined_text
+
+
+def get_context(query, key_words_dict, bm_25, vector_store, 
+                ensemble_k=5, retriever_k=10, verbose=True):
+    words = query.lower().split()
+    
+    if len(words) < 3 and any(word in key_words_dict for word in words):
+        if verbose:
+            print("→ Using KEY WORDS SEARCH")
+        return key_words_search(query, key_words_dict, vector_store, ensemble_k, verbose)
+    
+    if verbose:
+        print("→ Using SEMANTIC SEARCH")
+    return semantic_search(query, bm_25, vector_store, ensemble_k, retriever_k, verbose)

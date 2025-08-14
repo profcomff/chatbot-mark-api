@@ -71,6 +71,7 @@ opentelemetry-exporter-otlp-proto-grpc==1.35.0
 opentelemetry-proto==1.35.0
 opentelemetry-sdk==1.35.0
 opentelemetry-semantic-conventions==0.56b0
+openpyxl==3.1.2 #added for keywords
 orjson==3.11.1
 overrides==7.7.0
 packaging==25.0

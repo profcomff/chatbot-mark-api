@@ -87,7 +87,7 @@ def init_resources():
 
     # Generate keywords dictionary
     app.state.keywords_dict = generate_keywords_dict(
-        excel_path="file/database_v2_key_words.xlsx", 
+        vector_store=app.state.vector_store, 
         output_json_path="file/key_words_dict.json"
     )
        

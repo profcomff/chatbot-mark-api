@@ -9,9 +9,6 @@ import re
 from tqdm import tqdm
 import json #added for key_words
 
-from openpyxl import load_workbook #added for keywords
-from collections import defaultdict #added for keywords
-
 
 _STEMMER = SnowballStemmer("russian")
 _PREPROCESS_REGEX = re.compile(r'[^а-яё\s]')  
@@ -122,46 +119,39 @@ class E5LangChainEmbedder(Embeddings):
 
 
 #---added for keywords---
-def generate_keywords_dict(excel_path, output_json_path=None):
-    try:
-        workbook = load_workbook(excel_path)
-        sheet = workbook.active
-        keywords_dict = defaultdict(list)
-
-        for row in sheet.iter_rows(min_row=2, values_only=True):
-            if len(row) < 5:
-                continue
-
-            topic_id = str(row[3]).strip()
-            key_words_value = row[4]
-
-            if key_words_value is None or not str(key_words_value).strip():
-                continue
-
-            keywords = [
-                kw.strip().lower()
-                for kw in str(key_words_value).split(",")
-                if kw.strip()
-            ]
-
-            for kw in keywords:
-                keywords_dict[kw].append(topic_id)
-
-        result = dict(keywords_dict)
-
-        # Выводим, сколько ключевых слов найдено
-        print(f"Dictionary created: {len(result)} keywords")
-
-        if output_json_path:
-            with open(output_json_path, 'w', encoding='utf-8') as f:
-                json.dump(result, f, ensure_ascii=False, indent=2)
-            print(f"Dictionary saved to {output_json_path}")
-
-        return result
-
-    except Exception as e:
-        print(f"Error: {e}")
-        return {}
+def generate_keywords_dict(vector_store, output_json_path=None):
+    
+    all_docs = vector_store.get(include=["metadatas"])
+    keywords_dict = {}
+    
+    for metadata in all_docs["metadatas"]:
+        if "key_words" not in metadata:
+            continue
+            
+        key_words_str = metadata["key_words"]
+        if not key_words_str or str(key_words_str).strip() == "":
+            continue
+        
+        keywords = [
+            kw.strip().lower() 
+            for kw in str(key_words_str).split(",") 
+            if kw.strip()
+        ]
+        
+        topic_id = str(metadata["id"])
+        
+        for kw in keywords:
+            if kw not in keywords_dict:
+                keywords_dict[kw] = []
+            keywords_dict[kw].append(topic_id)
+    print(f"Create key_words_dict")
+    
+    if output_json_path:
+        with open(output_json_path, 'w', encoding='utf-8') as f:
+            json.dump(keywords_dict, f, ensure_ascii=False, indent=2)
+            print(f"Saved key_words_dict: {output_json_path}")
+    
+    return keywords_dict
 
 # def test_func(text):
 #      'фунция для примера'
@@ -172,14 +162,14 @@ def generate_keywords_dict(excel_path, output_json_path=None):
 #      else:
 #          context = semantinc_search()
 
-def key_words_search(query, key_words_dict, vector_store, ensemble_k=5, verbose=False):
+def key_words_search(query, key_words_dict, vector_store, verbose=False):
     words = query.lower().split()
     matching_ids = set()
     
     # Собираем ID тем, соответствующих ключевым словам
     for word in words:
         if word in key_words_dict:
-            matching_ids.update(int(excel_id) for excel_id in key_words_dict[word])
+            matching_ids.update(int(topic_id) for topic_id in key_words_dict[word])
         
     if verbose:
         print(f"Key words search: Found {len(matching_ids)} matching documents")
@@ -191,10 +181,9 @@ def key_words_search(query, key_words_dict, vector_store, ensemble_k=5, verbose=
         search_kwargs={"filter": filter_criteria, "k": len(matching_ids)}
     ).get_relevant_documents("")
     
-    # Форматируем результат
     results = [
         {"topic": doc.metadata["source"], "full_text": doc.page_content}
-        for doc in docs[:ensemble_k]
+        for doc in docs
     ]
     combined_text = "\n".join(doc.page_content for doc in docs)
     
@@ -234,7 +223,7 @@ def get_context(query, key_words_dict, bm_25, vector_store,
     if len(words) < 3 and any(word in key_words_dict for word in words):
         if verbose:
             print("→ Using KEY WORDS SEARCH")
-        return key_words_search(query, key_words_dict, vector_store, ensemble_k, verbose)
+        return key_words_search(query, key_words_dict, vector_store, verbose)
     
     if verbose:
         print("→ Using SEMANTIC SEARCH")

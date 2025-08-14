@@ -9,7 +9,6 @@ import re
 from tqdm import tqdm
 import json #added for key_words
 
-
 _STEMMER = SnowballStemmer("russian")
 _PREPROCESS_REGEX = re.compile(r'[^а-яё\s]')  
 _STOP_WORDS = set(stopwords.words('russian'))
@@ -172,20 +171,22 @@ def key_words_search(query, key_words_dict, vector_store, verbose=False):
             matching_ids.update(int(topic_id) for topic_id in key_words_dict[word])
         
     if verbose:
-        print(f"Key words search: Found {len(matching_ids)} matching documents")
+        print(f"Key words search: Found {matching_ids} matching documents")
     
-    # Создаём фильтр по ID
-    filter_criteria = {"id": {"$in": list(matching_ids)}} 
-    
-    docs = vector_store.as_retriever(
-        search_kwargs={"filter": filter_criteria, "k": len(matching_ids)}
-    ).get_relevant_documents("")
+    all_docs = []
+    for id in matching_ids:     # Создаём фильтр по ID
+        filter_criteria = {"id": id}
+        
+        docs = vector_store.as_retriever(
+            search_kwargs={"filter": filter_criteria, "k": 1}
+        ).get_relevant_documents("")
+        all_docs.extend(docs)
     
     results = [
         {"topic": doc.metadata["source"], "full_text": doc.page_content}
-        for doc in docs
+        for doc in all_docs
     ]
-    combined_text = "\n".join(doc.page_content for doc in docs)
+    combined_text = "\n".join(doc.page_content for doc in all_docs)
     
     return results, combined_text
 

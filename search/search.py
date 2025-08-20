@@ -6,22 +6,34 @@ from .preprocess import preprocess_lemma #нужно для keywords
 def generate_keywords_dict(vector_store, output_json_path=None):
     all_docs = vector_store.get(include=["metadatas"])
     keywords_dict = {}
+
     for doc_id, metadata in zip(all_docs["ids"], all_docs["metadatas"]):
         if "key_words" not in metadata or not metadata["key_words"]:
             continue
+
         for kw in metadata["key_words"].split(","):
             kw = kw.strip().lower()
             if not kw:
                 continue
-            keywords_dict.setdefault(kw, []).append(doc_id)
+
+            lemmas = preprocess_lemma(kw, filter_stopwords=True, filter_lemmatized_banned_words=True)
+            if not lemmas:
+                continue
+            processed_kw = " ".join(lemmas)
+
+            keywords_dict.setdefault(processed_kw, []).append(doc_id)
+
     if output_json_path:
-        with open(output_json_path, 'w', encoding='utf-8') as f:
+        with open(output_json_path, "w", encoding="utf-8") as f:
             json.dump(keywords_dict, f, ensure_ascii=False, indent=2)
+
     return keywords_dict
+
 
 def key_words_search(words, key_words_dict, vector_store, verbose=False):
     query_text = " ".join(words)
     matching_ids = set()
+
     for kw in key_words_dict:
         if kw in query_text:
             matching_ids.update(key_words_dict[kw])
@@ -29,9 +41,11 @@ def key_words_search(words, key_words_dict, vector_store, verbose=False):
         print(f"Key words search: Found {len(matching_ids)} matching documents")
     if not matching_ids:
         return [], ""
+    
     results = vector_store.get(ids=list(matching_ids), include=["metadatas", "documents"])
     formatted_results = [{"topic": results["metadatas"][i]["source"], "full_text": results["documents"][i]}
                          for i in range(len(results["documents"])) if "source" in results["metadatas"][i]]
+    
     combined_text = "\n".join(results["documents"]) if results["documents"] else ""
     return formatted_results, combined_text
 

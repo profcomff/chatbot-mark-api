@@ -1,6 +1,4 @@
 import sys
-import os
-
 sys.path.append("../")
 
 from fastapi import FastAPI, HTTPException, Request
@@ -11,18 +9,14 @@ from fastapi_sqlalchemy import DBSessionMiddleware
 from answer import __version__
 from answer.settings import get_settings
 
-from transformers import XLMRobertaTokenizer, XLMRobertaModel
 from langchain_chroma import Chroma
-from nltk.stem.snowball import SnowballStemmer
 from langchain_core.documents import Document
 from langchain_community.retrievers import BM25Retriever
 from llm.llm import get_answer
-import json
-import torch
-from nn.search import get_context, E5LangChainEmbedder, preprocess, generate_keywords_dict
-import random
-import pickle
 
+from search.search import get_context, generate_keywords_dict
+from search.nn import init_embedder
+from search.preprocess import preprocess
 
 settings = get_settings()
 app = FastAPI(
@@ -60,17 +54,12 @@ def init_resources():
     with open(settings.GIGA_KEY_PATH, "r") as f:
         app.state.credentials = f.read().strip()
     
-    app.state.tokenizer = XLMRobertaTokenizer.from_pretrained("d0rj/e5-base-en-ru", use_cache=False)
-    app.state.model = XLMRobertaModel.from_pretrained("d0rj/e5-base-en-ru", use_cache=False)
+    app.state.embedder = init_embedder()
     
-    embedder = E5LangChainEmbedder(
-        tokenizer=app.state.tokenizer,
-        model=app.state.model,
-    )
-    
-    app.state.vector_store = Chroma(
+    #вот это незнаю в какую функцию и куда положить
+    app.state.vector_store = Chroma( 
         collection_name="docs",
-        embedding_function=embedder,
+        embedding_function=app.state.embedder,
         persist_directory=settings.CHROMA_DIR
     )
     

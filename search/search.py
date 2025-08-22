@@ -34,9 +34,9 @@ def key_words_search(words, key_words_dict, vector_store, verbose=False):
     query_text = " ".join(words)
     matching_ids = set()
 
-    for kw in key_words_dict:
-        if kw in query_text:
-            matching_ids.update(key_words_dict[kw])
+    for key_word in key_words_dict:
+        if key_word in query_text:
+            matching_ids.update(key_words_dict[key_word])
     if verbose:
         print(f"Key words search: Found {len(matching_ids)} matching documents")
     if not matching_ids:

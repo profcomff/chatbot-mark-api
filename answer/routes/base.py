@@ -56,7 +56,6 @@ def init_resources():
     
     app.state.embedder = init_embedder()
     
-    #вот это незнаю в какую функцию и куда положить
     app.state.vector_store = Chroma( 
         collection_name="docs",
         embedding_function=app.state.embedder,

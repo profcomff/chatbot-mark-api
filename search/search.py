@@ -67,6 +67,7 @@ def get_context(query, key_words_dict, bm_25, vector_store, ensemble_k=5, retrie
         if verbose:
             print("→ Using KEY WORDS SEARCH")
         return key_words_search(words, key_words_dict, vector_store, verbose)
-    if verbose:
-        print("→ Using SEMANTIC SEARCH")
-    return semantic_search(query, bm_25, vector_store, ensemble_k, retriever_k, verbose)
+    else:
+        if verbose:
+            print("→ Using SEMANTIC SEARCH")
+        return semantic_search(query, bm_25, vector_store, ensemble_k, retriever_k, verbose)

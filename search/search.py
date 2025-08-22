@@ -1,7 +1,7 @@
 import json
 from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
-from .preprocess import preprocess_lemma #нужно для keywords
+from .preprocess import preprocess_lemma
 
 def generate_keywords_dict(vector_store, output_json_path=None):
     all_docs = vector_store.get(include=["metadatas"])

@@ -1,27 +1,60 @@
 import json
 from langchain_community.retrievers import BM25Retriever
+from qdrant_client.models import ScrollRequest
 from langchain.retrievers import EnsembleRetriever
 from .preprocess import preprocess_lemma
 
+# from langchain.schema import Document
+
+import json
+
 def generate_keywords_dict(vector_store, output_json_path=None):
-    all_docs = vector_store.get(include=["metadatas"])
     keywords_dict = {}
 
-    for doc_id, metadata in zip(all_docs["ids"], all_docs["metadatas"]):
-        if "key_words" not in metadata or not metadata["key_words"]:
-            continue
+    points, next_page = vector_store.client.scroll(
+        collection_name=vector_store.collection_name,
+        # limit=100,
+        with_payload=True
+    )
 
-        for kw in metadata["key_words"].split(","):
-            kw = kw.strip().lower()
-            if not kw:
+    while points:
+        for point in points:
+            doc_id = str(point.id)
+            payload = point.payload or {}
+            metadata = payload.get("metadata", payload) if isinstance(payload, dict) else {}
+
+            key_words_val = metadata.get("key_words")
+            if not key_words_val:
+                continue
+            
+            if isinstance(key_words_val, float):
                 continue
 
-            lemmas = preprocess_lemma(kw, filter_stopwords=True, filter_lemmatized_banned_words=True)
-            if not lemmas:
-                continue
-            processed_kw = " ".join(lemmas)
+            for kw in key_words_val.split(","):
+                kw = kw.strip().lower()
+                if not kw:
+                    continue
 
-            keywords_dict.setdefault(processed_kw, []).append(doc_id)
+                lemmas = preprocess_lemma(
+                    kw,
+                    filter_stopwords=True,
+                    filter_lemmatized_banned_words=True
+                )
+                if not lemmas:
+                    continue
+
+                processed_kw = " ".join(lemmas)
+                keywords_dict.setdefault(processed_kw, []).append(doc_id)
+
+        if next_page is None:
+            break
+
+        points, next_page = vector_store.client.scroll(
+            collection_name=vector_store.collection_name,
+            # limit=100,
+            with_payload=True,
+            offset=next_page
+        )
 
     if output_json_path:
         with open(output_json_path, "w", encoding="utf-8") as f:
@@ -31,22 +64,30 @@ def generate_keywords_dict(vector_store, output_json_path=None):
 
 
 def key_words_search(words, key_words_dict, vector_store, verbose=False):
-    query_text = " ".join(words)
+    query_text = " ".join(words).lower()
     matching_ids = set()
 
-    for key_word in key_words_dict:
+    for key_word, id_list in key_words_dict.items():
         if key_word in query_text:
-            matching_ids.update(key_words_dict[key_word])
+            matching_ids.update(str(i) for i in id_list)
+
     if verbose:
         print(f"Key words search: Found {len(matching_ids)} matching documents")
+
     if not matching_ids:
         return [], ""
-    
-    results = vector_store.get(ids=list(matching_ids), include=["metadatas", "documents"])
-    formatted_results = [{"topic": results["metadatas"][i]["source"], "full_text": results["documents"][i]}
-                         for i in range(len(results["documents"])) if "source" in results["metadatas"][i]]
-    
-    combined_text = "\n".join(results["documents"]) if results["documents"] else ""
+
+    docs = vector_store.get_by_ids(list(matching_ids))
+
+    formatted_results = []
+    docs_for_combination = []
+    for doc in docs:
+        meta = doc.metadata or {}
+        if "source" in meta:
+            formatted_results.append({"topic": meta["source"], "full_text": doc.page_content})
+        docs_for_combination.append(doc.page_content)
+
+    combined_text = "\n".join(docs_for_combination) if docs_for_combination else ""
     return formatted_results, combined_text
 
 def semantic_search(query, bm_25, vector_store, ensemble_k=5, retriever_k=10, verbose=False):

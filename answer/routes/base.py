@@ -13,6 +13,7 @@ from answer.settings import get_settings
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import Distance, VectorParams
+from qdrant_client.models import ScrollRequest
 
 from langchain_core.documents import Document
 from langchain_community.retrievers import BM25Retriever
@@ -60,28 +61,35 @@ def init_resources():
     
     app.state.embedder = init_embedder()
     
-    # app.state.vector_store = Chroma( 
-    #     collection_name="docs",
-    #     embedding_function=app.state.embedder,
-    #     persist_directory=settings.CHROMA_DIR
-    # )
-
-    app.state.qdrant_client = QdrantClient(
-        path="./qdrant_db"
-    )
+    app.state.qdrant_client = QdrantClient(path="./qdrant_db")
 
     app.state.vector_store = QdrantVectorStore(
         client=app.state.qdrant_client,
         collection_name="demo_collection",
         embedding=app.state.embedder,
     )
-    
-    all_docs = app.state.vector_store.get(include=["documents", "metadatas"])
-    documents = [
-        Document(page_content=doc_text, metadata=metadata)
-        for doc_text, metadata in zip(all_docs["documents"], all_docs["metadatas"])
-    ]
-    
+
+    documents = []
+    points, next_page = app.state.qdrant_client.scroll(
+        collection_name="demo_collection",
+        with_payload=True
+    )
+
+    while points:
+        for point in points:
+            doc_text = point.payload.get("page_content", "")
+            metadata = point.payload.get("metadata", {})
+            documents.append(Document(page_content=doc_text, metadata=metadata))
+        
+        if next_page is None:
+            break
+
+        points, next_page = app.state.qdrant_client.scroll(
+            collection_name="demo_collection",
+            with_payload=True,
+            offset=next_page
+        )
+
     app.state.bm25_retriever = BM25Retriever.from_documents(
         documents, 
         preprocess_func=preprocess
@@ -91,6 +99,7 @@ def init_resources():
         vector_store=app.state.vector_store, 
         output_json_path="file/key_words_dict.json"
     )
+
        
         
 @app.post("/greet")

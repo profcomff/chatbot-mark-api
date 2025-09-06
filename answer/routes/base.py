@@ -9,7 +9,11 @@ from fastapi_sqlalchemy import DBSessionMiddleware
 from answer import __version__
 from answer.settings import get_settings
 
-from langchain_chroma import Chroma
+# from langchain_chroma import Chroma
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import Distance, VectorParams
+
 from langchain_core.documents import Document
 from langchain_community.retrievers import BM25Retriever
 from llm.llm import get_answer
@@ -56,10 +60,20 @@ def init_resources():
     
     app.state.embedder = init_embedder()
     
-    app.state.vector_store = Chroma( 
-        collection_name="docs",
-        embedding_function=app.state.embedder,
-        persist_directory=settings.CHROMA_DIR
+    # app.state.vector_store = Chroma( 
+    #     collection_name="docs",
+    #     embedding_function=app.state.embedder,
+    #     persist_directory=settings.CHROMA_DIR
+    # )
+
+    app.state.qdrant_client = QdrantClient(
+        path="./qdrant_db"
+    )
+
+    app.state.vector_store = QdrantVectorStore(
+        client=app.state.qdrant_client,
+        collection_name="demo_collection",
+        embedding=app.state.embedder,
     )
     
     all_docs = app.state.vector_store.get(include=["documents", "metadatas"])
@@ -73,7 +87,6 @@ def init_resources():
         preprocess_func=preprocess
     )
 
-    # Generate keywords dictionary
     app.state.keywords_dict = generate_keywords_dict(
         vector_store=app.state.vector_store, 
         output_json_path="file/key_words_dict.json"

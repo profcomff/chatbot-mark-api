@@ -1,19 +1,15 @@
 import json
+import math
 from langchain_community.retrievers import BM25Retriever
 from qdrant_client.models import ScrollRequest
 from langchain.retrievers import EnsembleRetriever
 from .preprocess import preprocess_lemma
-
-# from langchain.schema import Document
-
-import json
 
 def generate_keywords_dict(vector_store, output_json_path=None):
     keywords_dict = {}
 
     points, next_page = vector_store.client.scroll(
         collection_name=vector_store.collection_name,
-        # limit=100,
         with_payload=True
     )
 
@@ -27,7 +23,7 @@ def generate_keywords_dict(vector_store, output_json_path=None):
             if not key_words_val:
                 continue
             
-            if isinstance(key_words_val, float):
+            if isinstance(key_words_val, float) and math.isnan(key_words_val): 
                 continue
 
             for kw in key_words_val.split(","):
@@ -51,7 +47,6 @@ def generate_keywords_dict(vector_store, output_json_path=None):
 
         points, next_page = vector_store.client.scroll(
             collection_name=vector_store.collection_name,
-            # limit=100,
             with_payload=True,
             offset=next_page
         )

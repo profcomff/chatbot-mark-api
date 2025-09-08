@@ -2,6 +2,7 @@ aiohappyeyeballs==2.6.1
 aiohttp==3.12.14
 aiosignal==1.4.0
 annotated-types==0.7.0
+alembic
 anyio==4.9.0
 attrs==25.3.0
 backoff==2.2.1

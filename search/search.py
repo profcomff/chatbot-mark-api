@@ -1,9 +1,32 @@
 import json
 import math
-from langchain_community.retrievers import BM25Retriever
-from qdrant_client.models import ScrollRequest
+from langchain_core.documents import Document
 from langchain.retrievers import EnsembleRetriever
 from .preprocess import preprocess_lemma
+
+def get_documents_from_qdrant(client, collection_name, page_content_field="page_content", metadata_field="metadata"):
+    documents = []
+    points, next_page = client.scroll(
+        collection_name=collection_name,
+        with_payload=True
+    )
+
+    while points:
+        for point in points:
+            doc_text = point.payload.get(page_content_field, "")
+            metadata = point.payload.get(metadata_field, {})
+            documents.append(Document(page_content=doc_text, metadata=metadata))
+        
+        if next_page is None:
+            break
+
+        points, next_page = client.scroll(
+            collection_name=collection_name,
+            with_payload=True,
+            offset=next_page
+        )
+    
+    return documents
 
 def generate_keywords_dict(vector_store, output_json_path=None):
     keywords_dict = {}

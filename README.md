@@ -28,10 +28,10 @@
 5. Установите переменные окружения
     ```console
     # Путь до chroma db (по умолчанию лежит в корневой папке проекта)
-    export CHROMA_DIR="/путь/до/папки/chroma_db"
+    export QDRANT_DIR="qdrant_db"
 
     # Ключ для гигачат API
-    export GIGA_KEY_PATH="/путь/до/ключа/gigakey.txt"
+    export GIGA_KEY_PATH="gigakey.txt"
     ```
 
 6. Запустите приложение
@@ -58,7 +58,7 @@ docker run -d \
   -e GIGA_KEY_PATH="/app/gigakey.txt" \
   -e APP_MODULE="answer.routes.base:app" \
   -e PYTHONPATH="/app" \
-  my-fastapi-langchain   
+  my-fastapi-langchain  
 ```
 
 

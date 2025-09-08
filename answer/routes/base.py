@@ -9,19 +9,15 @@ from fastapi_sqlalchemy import DBSessionMiddleware
 from answer import __version__
 from answer.settings import get_settings
 
-# from langchain_chroma import Chroma
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import Distance, VectorParams
-from qdrant_client.models import ScrollRequest
 
-from langchain_core.documents import Document
 from langchain_community.retrievers import BM25Retriever
 from llm.llm import get_answer
 
-from search.search import get_context, generate_keywords_dict
+from search.search import get_context, generate_keywords_dict, get_documents_from_qdrant
 from search.nn import init_embedder
-from search.preprocess import preprocess
+from search.preprocess import preprocess_stem
 
 settings = get_settings()
 app = FastAPI(
@@ -69,30 +65,16 @@ def init_resources():
         embedding=app.state.embedder,
     )
 
-    documents = []
-    points, next_page = app.state.qdrant_client.scroll(
+    documents = get_documents_from_qdrant(
+        client=app.state.qdrant_client,
         collection_name="demo_collection",
-        with_payload=True
+        page_content_field="page_content",
+        metadata_field="metadata"
     )
-
-    while points:
-        for point in points:
-            doc_text = point.payload.get("page_content", "")
-            metadata = point.payload.get("metadata", {})
-            documents.append(Document(page_content=doc_text, metadata=metadata))
-        
-        if next_page is None:
-            break
-
-        points, next_page = app.state.qdrant_client.scroll(
-            collection_name="demo_collection",
-            with_payload=True,
-            offset=next_page
-        )
 
     app.state.bm25_retriever = BM25Retriever.from_documents(
         documents, 
-        preprocess_func=preprocess
+        preprocess_func=preprocess_stem
     )
 
     app.state.keywords_dict = generate_keywords_dict(
@@ -100,7 +82,6 @@ def init_resources():
         output_json_path="file/key_words_dict.json"
     )
 
-       
         
 @app.post("/greet")
 async def generate_response(user_input: UserInput):

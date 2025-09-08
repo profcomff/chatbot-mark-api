@@ -12,7 +12,7 @@ _BANNED_WORDS = {'мгу', 'физфак', 'физический', 'универ
 _STEMMED_BANNED_WORDS = {_STEMMER.stem(w) for w in _BANNED_WORDS}
 _LEMMATIZED_BANNED_WORDS = {lemma.strip() for w in _BANNED_WORDS for lemma in _MYSTEM.lemmatize(w)}
 
-def preprocess(text, filter_stopwords=True, filter_stemmed_banned_words=True):
+def preprocess_stem(text, filter_stopwords=True, filter_stemmed_banned_words=True):
     cleaned = _PREPROCESS_REGEX.sub('', text.lower())
     words = word_tokenize(cleaned, language="russian")
     if filter_stopwords:

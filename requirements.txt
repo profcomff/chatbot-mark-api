@@ -10,7 +10,6 @@ build==1.2.2.post1
 cachetools==5.5.2
 certifi==2025.7.14
 charset-normalizer==3.4.2
-chromadb==1.0.15
 click==8.2.1
 coloredlogs==15.0.1
 dataclasses-json==0.6.7

@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     CORS_ALLOW_METHODS: list[str] = ["*"]
     CORS_ALLOW_HEADERS: list[str] = ["*"]
     
-    CHROMA_DIR: str
+    QDRANT_DIR: str
     GIGA_KEY_PATH: str
     
     GIGA_MAX_TOKENS: int = 500

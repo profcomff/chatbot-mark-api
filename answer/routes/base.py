@@ -9,14 +9,15 @@ from fastapi_sqlalchemy import DBSessionMiddleware
 from answer import __version__
 from answer.settings import get_settings
 
-from langchain_chroma import Chroma
-from langchain_core.documents import Document
+from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
+
 from langchain_community.retrievers import BM25Retriever
 from llm.llm import get_answer
 
-from search.search import get_context, generate_keywords_dict
+from search.search import get_context, generate_keywords_dict, get_documents_from_qdrant
 from search.nn import init_embedder
-from search.preprocess import preprocess
+from search.preprocess import preprocess_stem
 
 settings = get_settings()
 app = FastAPI(
@@ -56,29 +57,31 @@ def init_resources():
     
     app.state.embedder = init_embedder()
     
-    app.state.vector_store = Chroma( 
-        collection_name="docs",
-        embedding_function=app.state.embedder,
-        persist_directory=settings.CHROMA_DIR
-    )
-    
-    all_docs = app.state.vector_store.get(include=["documents", "metadatas"])
-    documents = [
-        Document(page_content=doc_text, metadata=metadata)
-        for doc_text, metadata in zip(all_docs["documents"], all_docs["metadatas"])
-    ]
-    
-    app.state.bm25_retriever = BM25Retriever.from_documents(
-        documents, 
-        preprocess_func=preprocess
+    app.state.qdrant_client = QdrantClient(path="./qdrant_db")
+
+    app.state.vector_store = QdrantVectorStore(
+        client=app.state.qdrant_client,
+        collection_name="demo_collection",
+        embedding=app.state.embedder,
     )
 
-    # Generate keywords dictionary
+    documents = get_documents_from_qdrant(
+        client=app.state.qdrant_client,
+        collection_name="demo_collection",
+        page_content_field="page_content",
+        metadata_field="metadata"
+    )
+
+    app.state.bm25_retriever = BM25Retriever.from_documents(
+        documents, 
+        preprocess_func=preprocess_stem
+    )
+
     app.state.keywords_dict = generate_keywords_dict(
         vector_store=app.state.vector_store, 
         output_json_path="file/key_words_dict.json"
     )
-       
+
         
 @app.post("/greet")
 async def generate_response(user_input: UserInput):

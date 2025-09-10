@@ -10,6 +10,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     
     DB_DSN: PostgresDsn = "postgresql://postgres@localhost:5432/postgres"
+    BOT_TOKEN: str = ""
     ROOT_PATH: str = "/" + os.getenv("APP_NAME", "")
     
     CORS_ALLOW_ORIGINS: list[str] = ["*"]

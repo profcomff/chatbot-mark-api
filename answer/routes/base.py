@@ -1,30 +1,35 @@
 import sys
+
+from answer.bot.tg_bot.initialisation import logger
+
+
 sys.path.append("../")
 
+from aiogram import Bot, Dispatcher
+from aiogram.types import Update
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.responses import HTMLResponse
 from fastapi_sqlalchemy import DBSessionMiddleware
-from answer import __version__
-from answer.settings import get_settings
-
+from langchain_community.retrievers import BM25Retriever
 from langchain_qdrant import QdrantVectorStore
+from pydantic import BaseModel
 from qdrant_client import QdrantClient
 
-from langchain_community.retrievers import BM25Retriever
+from answer import __version__
+from answer.bot.tg_bot.initialisation import bot, bot_shutdown, bot_startup, dp
+from answer.settings import get_settings
 from llm.llm import get_answer
-
-from search.search import get_context, generate_keywords_dict, get_documents_from_qdrant
 from search.nn import init_embedder
 from search.preprocess import preprocess_stem
+from search.search import generate_keywords_dict, get_context, get_documents_from_qdrant
+
 
 settings = get_settings()
 app = FastAPI(
     title='Ассистент',
     description='-',
     version=__version__,
-
     root_path=settings.ROOT_PATH if __version__ != 'dev' else '',
     docs_url=None if __version__ != 'dev' else '/docs',
     redoc_url=None,
@@ -47,16 +52,38 @@ app.add_middleware(
 
 class UserInput(BaseModel):
     text: str
-    generate_ai_response: bool = False  
+    generate_ai_response: bool = False
 
-        
+
+@app.post(settings.WEBHOOK_PATH)
+async def webhook_handler(request: Request):
+    """Обработчик webhook  обновления от тг"""
+
+    try:
+        update_data = await request.json()
+        logger.info(f"Received webhook data: {update_data}")
+
+        update = Update(**update_data)
+        logger.info(f"Created update object: {update}")
+
+        await dp.feed_update(bot=bot, update=update)
+        logger.info("Update processed successfully")
+
+        return {"status": "ok"}
+
+    except Exception as e:
+        logger.error(f"Error processing webhook: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+
 @app.on_event("startup")
-def init_resources():    
+async def init_resources():
+    app.state.bot = await bot_startup()
     with open(settings.GIGA_KEY_PATH, "r") as f:
         app.state.credentials = f.read().strip()
-    
+
     app.state.embedder = init_embedder()
-    
+
     app.state.qdrant_client = QdrantClient(path="./qdrant_db")
 
     app.state.vector_store = QdrantVectorStore(
@@ -69,25 +96,26 @@ def init_resources():
         client=app.state.qdrant_client,
         collection_name="demo_collection",
         page_content_field="page_content",
-        metadata_field="metadata"
+        metadata_field="metadata",
     )
 
-    app.state.bm25_retriever = BM25Retriever.from_documents(
-        documents, 
-        preprocess_func=preprocess_stem
-    )
+    app.state.bm25_retriever = BM25Retriever.from_documents(documents, preprocess_func=preprocess_stem)
 
     app.state.keywords_dict = generate_keywords_dict(
-        vector_store=app.state.vector_store, 
-        output_json_path="file/key_words_dict.json"
+        vector_store=app.state.vector_store, output_json_path="file/key_words_dict.json"
     )
 
-        
+
+@app.on_event("shutdown")
+async def shutdown_resources():
+    app.state.bot = await bot_shutdown()
+
+
 @app.post("/greet")
 async def generate_response(user_input: UserInput):
     if not user_input.text:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
-    
+
     results, combined_text = get_context(
         query=user_input.text,
         key_words_dict=app.state.keywords_dict,
@@ -95,18 +123,15 @@ async def generate_response(user_input: UserInput):
         vector_store=app.state.vector_store,
         ensemble_k=settings.ensemble_k,
         retriever_k=settings.retrivier_k,
-        verbose=True
+        verbose=True,
     )
-    
+
     if user_input.generate_ai_response:
         ai_answer = get_answer(
-            context=combined_text, 
-            question=user_input.text, 
-            credentials=app.state.credentials,
-            settings=settings
+            context=combined_text, question=user_input.text, credentials=app.state.credentials, settings=settings
         )
         return {"results": results, "ai_answer": ai_answer}
-    
+
     return {"results": results}
 
 

@@ -3,29 +3,35 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
-from pydantic import ConfigDict, PostgresDsn, Field, field_validator
+from pydantic import ConfigDict, Field, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    
+    model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
+
     DB_DSN: PostgresDsn = "postgresql://postgres@localhost:5432/postgres"
     BOT_TOKEN: str = ""
+    BASE_URL: str = ""
+    WEBHOOK_PATH: str = "/webhook"
     ROOT_PATH: str = "/" + os.getenv("APP_NAME", "")
-    
+
     CORS_ALLOW_ORIGINS: list[str] = ["*"]
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: list[str] = ["*"]
     CORS_ALLOW_HEADERS: list[str] = ["*"]
-    
-    QDRANT_DIR: str
-    GIGA_KEY_PATH: str
-    
+
+    QDRANT_DIR: str = ""
+    GIGA_KEY_PATH: str = ""
+
     GIGA_MAX_TOKENS: int = 500
     PROFANITY_CHECK: bool = True
-    
+    HOST: str = ""
+    PORT: int
+
     ensemble_k: int = 5
-    retrivier_k: int = 10                     
+    retrivier_k: int = 10
+
 
 @lru_cache
 def get_settings() -> Settings:

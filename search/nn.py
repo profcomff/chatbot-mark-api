@@ -1,11 +1,11 @@
 import torch
-from tqdm import tqdm
 from langchain_core.embeddings import Embeddings
-from transformers import XLMRobertaTokenizer, XLMRobertaModel
+from tqdm import tqdm
+from transformers import XLMRobertaModel, XLMRobertaTokenizer
+
 
 class E5LangChainEmbedder(Embeddings):
-    def __init__(self, tokenizer, model, device='cpu', embed_batch_size=8,
-                 add_prefix=False, disable_tqdm=False):
+    def __init__(self, tokenizer, model, device='cpu', embed_batch_size=8, add_prefix=False, disable_tqdm=False):
         self.tokenizer = tokenizer
         self.model = model.to(device)
         self.device = device
@@ -22,11 +22,16 @@ class E5LangChainEmbedder(Embeddings):
         if self.add_prefix:
             texts = ["passage: " + t for t in texts]
         all_embeddings = []
-        for i in tqdm(range(0, len(texts), self.embed_batch_size),
-                      desc="Вычисление эмбеддингов", unit="batch", disable=self.disable_tqdm):
-            batch_texts = texts[i:i + self.embed_batch_size]
-            batch_dict = self.tokenizer(batch_texts, max_length=512, padding=True,
-                                        truncation=True, return_tensors='pt').to(self.device)
+        for i in tqdm(
+            range(0, len(texts), self.embed_batch_size),
+            desc="Вычисление эмбеддингов",
+            unit="batch",
+            disable=self.disable_tqdm,
+        ):
+            batch_texts = texts[i : i + self.embed_batch_size]
+            batch_dict = self.tokenizer(
+                batch_texts, max_length=512, padding=True, truncation=True, return_tensors='pt'
+            ).to(self.device)
             with torch.no_grad():
                 outputs = self.model(**batch_dict)
                 embeddings = self._average_pool(outputs.last_hidden_state, batch_dict['attention_mask'])
@@ -37,13 +42,15 @@ class E5LangChainEmbedder(Embeddings):
     def embed_query(self, text):
         if self.add_prefix:
             text = "query: " + text
-        batch_dict = self.tokenizer([text], max_length=512, padding=True,
-                                    truncation=True, return_tensors='pt').to(self.device)
+        batch_dict = self.tokenizer([text], max_length=512, padding=True, truncation=True, return_tensors='pt').to(
+            self.device
+        )
         with torch.no_grad():
             outputs = self.model(**batch_dict)
             embeddings = self._average_pool(outputs.last_hidden_state, batch_dict['attention_mask'])
             embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
             return embeddings.cpu().tolist()[0]
+
 
 def init_embedder():
     tokenizer = XLMRobertaTokenizer.from_pretrained("d0rj/e5-base-en-ru", use_cache=False)

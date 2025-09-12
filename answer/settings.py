@@ -13,7 +13,11 @@ class Settings(BaseSettings):
     DB_DSN: PostgresDsn = "postgresql://postgres@localhost:5432/postgres"
     BOT_TOKEN: str = ""
     BASE_URL: str = ""
-    WEBHOOK_PATH: str = "/webhook"
+    BASE_DESCRIPTION: str = (
+        "\nЯ - бот помощник для студентов физического факультета МГУ.\nЗадай любой вопрос по стипендиям, учебным правам, социальным программам и иным особенностям обучения - я постараюсь тебе помочь."
+    )
+    CONTEXT_DEPTH: int = 3
+    WEBHOOK_PATH: str = ""
     ROOT_PATH: str = "/" + os.getenv("APP_NAME", "")
 
     CORS_ALLOW_ORIGINS: list[str] = ["*"]
@@ -26,11 +30,12 @@ class Settings(BaseSettings):
 
     GIGA_MAX_TOKENS: int = 500
     PROFANITY_CHECK: bool = True
-    HOST: str = ""
-    PORT: int
+    HOST: str = "127.0.0.1"
+    PORT: int = 8080
 
     ensemble_k: int = 5
     retrivier_k: int = 10
+    MAX_BUTTONS: int = 5
 
 
 @lru_cache

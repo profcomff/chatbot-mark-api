@@ -18,6 +18,7 @@ from llm.llm import get_answer
 from search.search import get_context, generate_keywords_dict, get_documents_from_qdrant
 from search.nn import init_embedder
 from search.preprocess import preprocess_stem
+from search.filter import length_filter
 
 settings = get_settings()
 app = FastAPI(
@@ -99,13 +100,18 @@ async def generate_response(user_input: UserInput):
     )
     
     if user_input.generate_ai_response:
-        ai_answer = get_answer(
-            context=combined_text, 
-            question=user_input.text, 
-            credentials=app.state.credentials,
-            settings=settings
-        )
-        return {"results": results, "ai_answer": ai_answer}
+        if length_filter(text=user_input.text, max_len=settings.max_length):
+            ai_answer = get_answer(
+                context=combined_text, 
+                question=user_input.text, 
+                credentials=app.state.credentials,
+                settings=settings
+            )
+        
+            return {"results": results, "ai_answer": ai_answer}
+        
+        else: 
+            return {"results": [], "ai_answer": 'Ваш запрос слишком длинный :( Сделайте короче или используйте режим безGPT.'}
     
     return {"results": results}
 

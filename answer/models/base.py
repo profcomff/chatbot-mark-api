@@ -62,21 +62,16 @@ class BaseDbModel(Base):
     def update(cls, id: int | str, *, session: Session, **kwargs) -> BaseDbModel:
         obj = cls.get(id, session=session)
 
-        # Технические поля не проверяются при update комментария
-        technical_fields = {'update_ts', 'review_status'}
-
-        # Проверка на изменение полей
         changed_fields = False
         for field, new_value in kwargs.items():
 
             old_value = getattr(obj, field)
-            if old_value != new_value and not field in technical_fields:
+            if old_value != new_value:
                 changed_fields = True
                 break
 
         if not changed_fields:
             raise UpdateError(msg=f"No changes detected in fields")
-            # raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"No changes detected in fields")
 
         for k, v in kwargs.items():
             setattr(obj, k, v)

@@ -22,17 +22,19 @@ async def ask_for_help(callback: CallbackQuery):
             await callback.answer("❌ Ошибка валидации данных")
             return
 
-        help_text = """
-🆘 <b>Поддержка</b>
+        help_text = """Раздел в разработке"""
+        
 
-Если у вас возникли вопросы или проблемы, вы можете:
+# 🆘 <b>Поддержка</b>
 
-📧 Написать на почту: pochtazatichka@profcomff.com
-💬 Обратиться в техническую поддержку через официальные каналы
-🔧 Описать проблему максимально подробно для быстрого решения
+# Если у вас возникли вопросы или проблемы, вы можете:
 
-Мы постараемся ответить в кратчайшие сроки!
-        """
+# 📧 Написать на почту: pochtazatichka@profcomff.com
+# 💬 Обратиться в техническую поддержку через официальные каналы
+# 🔧 Описать проблему максимально подробно для быстрого решения
+
+# Мы постараемся ответить в кратчайшие сроки!
+
         base_menu = await get_menu_from_help()
         await callback.message.answer(text=help_text, reply_markup=base_menu.as_markup())
         await callback.answer()

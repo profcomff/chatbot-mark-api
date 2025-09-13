@@ -169,26 +169,27 @@ async def generate_response(user_input: UserInput):
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
     if user_input.generate_ai_response:
-        result = await search_service.search_and_generate(user_input)
+        if length_filter(text=user_input.text, max_len=settings.max_length):
+            result = await search_service.search_and_generate(user_input)
 
-        if result.message:
-            return {"message": result.message}
+            if result.message:
+                return {"message": result.message}
 
-        response = {
-            "results": [
-                {"topic": r.topic, "full_text": r.full_text, "metadata": r.metadata or {}} for r in result.results
-            ]
-        }
+            response = {
+                "results": [
+                    {"topic": r.topic, "full_text": r.full_text, "metadata": r.metadata or {}} for r in result.results
+                ]
+            }
 
-        if result.ai_answer:
-            response["ai_answer"] = result.ai_answer
+            if result.ai_answer:
+                response["ai_answer"] = result.ai_answer
 
-        return response
-    else:
-        return {
-            "results": [],
-            "ai_answer": 'Ваш запрос слишком длинный :( Сделайте короче или используйте режим безGPT.',
-        }
+            return response
+        else:
+            return {
+                "results": [],
+                "ai_answer": 'Ваш запрос слишком длинный :( Сделайте короче или используйте режим безGPT.',
+            }
 
 
 @app.post("/users", response_model=UserResponse)

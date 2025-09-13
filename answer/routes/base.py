@@ -32,6 +32,7 @@ from answer.schemas.api_models import (
 from answer.schemas.db_models import StatusMessage
 from answer.services import get_search_service
 from answer.settings import get_settings
+from search.filter import length_filter
 from search.nn import init_embedder
 from search.preprocess import preprocess_stem
 from search.search import generate_keywords_dict, get_documents_from_qdrant
@@ -115,7 +116,6 @@ async def webhook_handler(request: Request):
 async def init_resources():
     global bot, dp
 
-    # Инициализируем бота и получаем объекты
     bot, dp = await bot_startup()
     app.state.bot = bot
     with open(settings.GIGA_KEY_PATH, "r") as f:
@@ -168,19 +168,27 @@ async def generate_response(user_input: UserInput):
     if not user_input.text:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
 
-    result = await search_service.search_and_generate(user_input)
+    if user_input.generate_ai_response:
+        result = await search_service.search_and_generate(user_input)
 
-    if result.message:
-        return {"message": result.message}
+        if result.message:
+            return {"message": result.message}
 
-    response = {
-        "results": [{"topic": r.topic, "full_text": r.full_text, "metadata": r.metadata or {}} for r in result.results]
-    }
+        response = {
+            "results": [
+                {"topic": r.topic, "full_text": r.full_text, "metadata": r.metadata or {}} for r in result.results
+            ]
+        }
 
-    if result.ai_answer:
-        response["ai_answer"] = result.ai_answer
+        if result.ai_answer:
+            response["ai_answer"] = result.ai_answer
 
-    return response
+        return response
+    else:
+        return {
+            "results": [],
+            "ai_answer": 'Ваш запрос слишком длинный :( Сделайте короче или используйте режим безGPT.',
+        }
 
 
 @app.post("/users", response_model=UserResponse)

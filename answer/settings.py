@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     ensemble_k: int = 5
     retrivier_k: int = 10
     MAX_BUTTONS: int = 5
+    max_length: int = 200
 
 
 @lru_cache

@@ -58,7 +58,10 @@ def init_resources():
     
     app.state.embedder = init_embedder()
     
-    app.state.qdrant_client = QdrantClient(path="./qdrant_db")
+    app.state.qdrant_client = QdrantClient(
+        url="http://qdrant.profcomff.com:6333",
+        api_key=settings.QDRANT_API_KEY
+    )
 
     app.state.vector_store = QdrantVectorStore(
         client=app.state.qdrant_client,
@@ -143,7 +146,7 @@ async def read_root():
                 margin: 0;
                 padding: 2rem;
                 background: var(--background);
-                color: var(--text-color);
+                color: var(--text-color);http://127.0.0.1:8000
             }}
             
             .container {{

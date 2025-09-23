@@ -27,8 +27,8 @@
 
 5. Установите переменные окружения
     ```console
-    # Путь до qdrant db (по умолчанию лежит в корневой папке проекта)
-    export QDRANT_DIR="qdrant_db"
+    # Ключ для доступа к бд
+    export QDRANT_API_KEY="qdrant_api_key"
 
     # Ключ для гигачат API
     export GIGA_KEY_PATH="gigakey.txt"

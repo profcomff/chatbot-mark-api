@@ -146,7 +146,7 @@ async def read_root():
                 margin: 0;
                 padding: 2rem;
                 background: var(--background);
-                color: var(--text-color);http://127.0.0.1:8000
+                color: var(--text-color);
             }}
             
             .container {{

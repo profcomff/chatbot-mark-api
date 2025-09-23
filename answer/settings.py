@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     ensemble_k: int = 5
     retrivier_k: int = 10
     max_length: int = 200
+    warning_message: str = ' Ответ сгенерирован ИИ и может содержать неточности.'
 
 @lru_cache
 def get_settings() -> Settings:

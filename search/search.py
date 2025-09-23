@@ -4,6 +4,7 @@ from langchain_core.documents import Document
 from langchain.retrievers import EnsembleRetriever
 from .preprocess import preprocess_lemma
 
+
 def get_documents_from_qdrant(client, collection_name, page_content_field="page_content", metadata_field="metadata"):
     documents = []
     points, next_page = client.scroll(
@@ -27,6 +28,7 @@ def get_documents_from_qdrant(client, collection_name, page_content_field="page_
         )
     
     return documents
+
 
 def generate_keywords_dict(vector_store, output_json_path=None):
     keywords_dict = {}
@@ -108,6 +110,7 @@ def key_words_search(words, key_words_dict, vector_store, verbose=False):
     combined_text = "\n".join(docs_for_combination) if docs_for_combination else ""
     return formatted_results, combined_text
 
+
 def semantic_search(query, bm_25, vector_store, ensemble_k=5, retriever_k=10, verbose=False):
     if verbose:
         print("Semantic search: Using hybrid retrieval (BM25 + vector search)")
@@ -118,6 +121,7 @@ def semantic_search(query, bm_25, vector_store, ensemble_k=5, retriever_k=10, ve
     results = [{"topic": r.metadata['source'], "full_text": r.page_content} for r in rankings]
     combined_text = "\n".join(r.page_content for r in rankings)
     return results, combined_text
+
 
 def get_context(query, key_words_dict, bm_25, vector_store, ensemble_k=5, retriever_k=10, verbose=True):
     words = preprocess_lemma(query, filter_stopwords=False, filter_lemmatized_banned_words=False)

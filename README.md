@@ -1,6 +1,24 @@
 # Ассистент
 
-## Запуск
+## Создание БД
+1. Установите зависимости
+    ```console
+    pip install -r requirements.txt
+    ```
+
+2. Установите переменные окружения
+    ```console
+    export QDRANT_API_KEY="qdrant_api_key"
+    
+    export COLLECTION_NAME='collection_name' # Используйте не занятое
+    ```
+3. Запустите скрипт
+    ```console
+    cd scripts
+    
+    python create_qdrant_db.py 
+    ```
+## Запуск API
 
 1. Перейдите в папку проекта
 

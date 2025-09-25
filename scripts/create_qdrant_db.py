@@ -41,7 +41,7 @@ qdrant_client = QdrantClient(
     api_key=qdrant_api_key
 )
 
-collection_name = "number_id_collect"
+collection_name = os.getenv("COLLECTION_NAME")
 qdrant_client.create_collection(
     collection_name=collection_name,
     vectors_config=VectorParams(size=768, distance=Distance.COSINE),

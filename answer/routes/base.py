@@ -65,13 +65,13 @@ def init_resources():
 
     app.state.vector_store = QdrantVectorStore(
         client=app.state.qdrant_client,
-        collection_name="demo_collection",
+        collection_name=settings.collection_name,
         embedding=app.state.embedder,
     )
 
     documents = get_documents_from_qdrant(
         client=app.state.qdrant_client,
-        collection_name="demo_collection",
+        collection_name=settings.collection_name,
         page_content_field="page_content",
         metadata_field="metadata"
     )
@@ -99,7 +99,8 @@ async def generate_response(user_input: UserInput):
         vector_store=app.state.vector_store,
         ensemble_k=settings.ensemble_k,
         retriever_k=settings.retrivier_k,
-        verbose=True
+        verbose=True,
+        ai_generate=user_input.generate_ai_response
     )
     
     if user_input.generate_ai_response:
@@ -108,15 +109,19 @@ async def generate_response(user_input: UserInput):
                 context=combined_text, 
                 question=user_input.text, 
                 credentials=app.state.credentials,
-                settings=settings
+                settings=settings,
             )
         
             return {"results": results, "ai_answer": ai_answer}
         
         else: 
             return {"results": [], "ai_answer": 'Ваш запрос слишком длинный :( Сделайте короче или используйте режим безGPT.'}
-    
-    return {"results": results}
+        
+    if len(results) > 0:
+        return {"results": results}
+    else:             
+        return {"results": [], "ai_answer": 'Извините, я не понял Ваш запрос. Попробуйте использовать GPT версию.'}
+
 
 
 @app.get("/", response_class=HTMLResponse)

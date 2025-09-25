@@ -34,14 +34,14 @@ def safe_add_documents(vector_store, chunks, batch_size=1000):
     print("Все документы успешно добавлены!")
 
 embedder = init_embedder()
-qdrant_api_key = getpass.getpass("Enter QDRANT_API_KEY: ")
+qdrant_api_key = os.getenv("QDRANT_API_KEY")
 
 qdrant_client = QdrantClient(
     url="http://qdrant.profcomff.com:6333",
     api_key=qdrant_api_key
 )
 
-collection_name = "demo_collection_test"
+collection_name = "number_id_collect"
 qdrant_client.create_collection(
     collection_name=collection_name,
     vectors_config=VectorParams(size=768, distance=Distance.COSINE),
@@ -57,12 +57,13 @@ table_path = Path(__file__).parent.parent / "file" / "database_v4_key_words.xlsx
 answers = pd.read_excel(table_path)
 
 all_chunks = []
-for answer, topic_name, kw in zip(answers['answer'], answers['topic_name'], answers['Key words']):
+for i, (answer, topic_name, kw) in enumerate(zip(answers['answer'], answers['topic_name'], answers['Key words'])):
     all_chunks.append(Document(
         page_content=answer,
         metadata={
             "source": topic_name.strip(),
             "key_words": kw,
+            'number_id': i
         }
     ))
 

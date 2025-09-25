@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     ensemble_k: int = 5
     retrivier_k: int = 10
     max_length: int = 200
+    collection_name: str = 'number_id_collect'
     warning_message: str = ' Ответ сгенерирован ИИ и может содержать неточности.'
 
 @lru_cache

@@ -15,6 +15,9 @@ from qdrant_client import QdrantClient
 from langchain_community.retrievers import BM25Retriever
 from llm.llm import get_answer
 
+from langchain.retrievers import EnsembleRetriever
+from search.nn import FilteredEnsembleRetriever
+
 from search.search import get_context, generate_keywords_dict, get_documents_from_qdrant
 from search.nn import init_embedder
 from search.preprocess import preprocess_stem
@@ -62,13 +65,7 @@ def init_resources():
         url="http://qdrant.profcomff.com:6333",
         api_key=settings.QDRANT_API_KEY
     )
-
-    app.state.vector_store = QdrantVectorStore(
-        client=app.state.qdrant_client,
-        collection_name=settings.collection_name,
-        embedding=app.state.embedder,
-    )
-
+    
     documents = get_documents_from_qdrant(
         client=app.state.qdrant_client,
         collection_name=settings.collection_name,
@@ -76,31 +73,52 @@ def init_resources():
         metadata_field="metadata"
     )
 
+    
     app.state.bm25_retriever = BM25Retriever.from_documents(
         documents, 
-        preprocess_func=preprocess_stem
+        preprocess_func=preprocess_stem,
+        k=settings.retrivier_k
     )
 
+    app.state.vector_store = QdrantVectorStore(
+        client=app.state.qdrant_client,
+        collection_name=settings.collection_name,
+        embedding=app.state.embedder,
+    )
+    
+    app.state.vector_retriever = app.state.vector_store.as_retriever(search_kwargs={"k": settings.retrivier_k})
+    
+    app.state.ensemble_retriever = EnsembleRetriever(retrievers=[app.state.bm25_retriever, app.state.vector_retriever], 
+                                                    weights=[0.5, 0.5])
+        
+    app.state.filtered_ensemble_retriever = FilteredEnsembleRetriever(app.state.vector_store, 
+                                                                      app.state.bm25_retriever, 
+                                                                      retriever_k=settings.retrivier_k, 
+                                                                      ensemble_k=settings.ensemble_k)
+        
     app.state.keywords_dict = generate_keywords_dict(
         vector_store=app.state.vector_store, 
         output_json_path="file/key_words_dict.json"
     )
-
         
 @app.post("/greet")
 async def generate_response(user_input: UserInput):
     if not user_input.text:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
     
+    if user_input.generate_ai_response:
+        ensemble_retriever = app.state.ensemble_retriever
+    
+    else:
+        ensemble_retriever = app.state.filtered_ensemble_retriever
+        
     results, combined_text = get_context(
         query=user_input.text,
         key_words_dict=app.state.keywords_dict,
-        bm_25=app.state.bm25_retriever,
+        ensemble_retriever=ensemble_retriever,
         vector_store=app.state.vector_store,
-        ensemble_k=settings.ensemble_k,
-        retriever_k=settings.retrivier_k,
+        ensemble_k = settings.ensemble_k,
         verbose=True,
-        ai_generate=user_input.generate_ai_response
     )
     
     if user_input.generate_ai_response:

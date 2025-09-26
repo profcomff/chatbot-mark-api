@@ -1,8 +1,6 @@
 import json
 import math
 from langchain_core.documents import Document
-from langchain.retrievers import EnsembleRetriever
-from .nn import FilteredEnsembleRetriever
 from .preprocess import preprocess_lemma
 
 
@@ -112,26 +110,18 @@ def key_words_search(words, key_words_dict, vector_store, verbose=False):
     return formatted_results, combined_text
 
 
-def semantic_search(query, bm_25, vector_store, ensemble_k=5, retriever_k=10, verbose=False, ai_generate=False):
+def semantic_search(query, ensemble_retriever, ensemble_k, verbose=False):
     if verbose:
         print("Semantic search: Using hybrid retrieval (BM25 + vector search)")
-    bm_25.k = retriever_k
     
-    if ai_generate:
-        vector_retriever = vector_store.as_retriever(search_kwargs={"k": retriever_k})
-        ensemble_retriever = EnsembleRetriever(retrievers=[bm_25, vector_retriever], weights=[0.5, 0.5])
-        rankings = ensemble_retriever.invoke(query)[:ensemble_k]
-    
-    else:
-        ensemble_retriever = FilteredEnsembleRetriever(vector_store, bm_25, retriever_k=retriever_k, ensemble_k=ensemble_k)
-        rankings = ensemble_retriever.invoke(query)
+    rankings = ensemble_retriever.invoke(query)[:ensemble_k]
     
     results = [{"topic": r.metadata['source'], "full_text": r.page_content} for r in rankings]
     combined_text = "\n".join(r.page_content for r in rankings)
     return results, combined_text
 
 
-def get_context(query, key_words_dict, bm_25, vector_store, ensemble_k=5, retriever_k=10, verbose=True, ai_generate=False):
+def get_context(query, key_words_dict, ensemble_retriever, vector_store, ensemble_k, verbose=True):
     words = preprocess_lemma(query, filter_stopwords=False, filter_lemmatized_banned_words=False)
     query_key = " ".join(words)
     if len(words) < 3 and any(kw in query_key for kw in key_words_dict):
@@ -141,4 +131,4 @@ def get_context(query, key_words_dict, bm_25, vector_store, ensemble_k=5, retrie
     else:
         if verbose:
             print("→ Using SEMANTIC SEARCH")
-        return semantic_search(query, bm_25, vector_store, ensemble_k, retriever_k, verbose, ai_generate=False)
+        return semantic_search(query, ensemble_retriever, ensemble_k, verbose)

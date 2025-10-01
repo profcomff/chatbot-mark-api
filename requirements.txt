@@ -1,3 +1,4 @@
+aiogram
 aiohappyeyeballs==2.6.1
 aiohttp==3.12.14
 aiosignal==1.4.0
@@ -52,6 +53,7 @@ langchain-community==0.3.27
 langchain-core==0.3.72
 langchain-text-splitters==0.3.9
 langsmith==0.4.8
+logging
 markdown-it-py==3.0.0
 MarkupSafe==3.0.2
 marshmallow==3.26.1
@@ -62,7 +64,7 @@ multidict==6.6.3
 mypy_extensions==1.1.0
 networkx==3.5
 nltk==3.9.1
-numpy==2.3.2
+numpy<2.0
 oauthlib==3.3.1
 onnxruntime==1.22.1
 opentelemetry-api==1.35.0

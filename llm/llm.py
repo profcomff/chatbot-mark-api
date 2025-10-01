@@ -38,4 +38,5 @@ def get_answer(context, question, credentials, settings):
     )
 
     response = giga.chat(chat)
-    return response.choices[0].message.content
+
+    return response.choices[0].message.content + '\n' + settings.warning_message

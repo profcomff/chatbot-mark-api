@@ -60,3 +60,88 @@ def init_embedder():
         tokenizer=tokenizer,
         model=model,
     )
+
+
+class FilteredEnsembleRetriever:
+    def __init__(self, semantic_model, bm25, retriever_k=20, ensemble_k=5, weights=[0.5, 0.5], c=60):
+        self.semantic_model = semantic_model  # like vector_store
+        self.bm25 = bm25
+        self.retriever_k = retriever_k
+        self.ensemble_k = ensemble_k
+        self.weights = weights
+        self.bm25.k = retriever_k
+        self.c = 60
+        self.relevance_score = 0.8
+
+    def _make_relevant_dict(self, documents):
+        relevance_dict = {}
+        for i in range(len(documents)):
+            relevance_dict[documents[i][0].metadata['number_id']] = documents[i][1] > self.relevance_score
+        return relevance_dict
+
+    @staticmethod
+    def _make_rank_dict(documents):
+        rank_dict = {}
+        for i in range(len(documents)):
+            rank_dict[documents[i].metadata['number_id']] = i + 1
+        return rank_dict
+
+    @staticmethod
+    def _score_2_rank(dict_score):
+        sorted_items = sorted(dict_score.items(), key=lambda x: x[1], reverse=True)
+        return {doc_id: rank + 1 for rank, (doc_id, _) in enumerate(sorted_items)}
+
+    def _rank_fusion(self, ranks1, ranks2):
+        all_docs = set(ranks1.keys()) | set(ranks2.keys())
+        fused_scores = {}
+
+        for doc_id in all_docs:
+            rank1 = ranks1.get(doc_id, float('inf'))
+            rank2 = ranks2.get(doc_id, float('inf'))
+
+            score1 = self.weights[0] / (rank1 + self.c) if rank1 != float('inf') else 0
+            score2 = self.weights[1] / (rank2 + self.c) if rank2 != float('inf') else 0
+
+            fused_scores[doc_id] = score1 + score2
+
+        return fused_scores
+
+    @staticmethod
+    def _filter_relevance(fusion_score, relevance_dict):
+        return {
+            doc_id: score
+            for doc_id, score in fusion_score.items()
+            if doc_id in relevance_dict and relevance_dict[doc_id]
+        }
+
+    def _get_documents_by_ids(self, doc_ids, semantic_docs, bm25_docs):
+        id_to_doc = {}
+
+        for doc, _ in semantic_docs:
+            id_to_doc[doc.metadata['number_id']] = doc
+
+        for doc in bm25_docs:
+            doc_id = doc.metadata['number_id']
+            if doc_id not in id_to_doc:
+                id_to_doc[doc_id] = doc
+
+        return [id_to_doc[doc_id] for doc_id in doc_ids if doc_id in id_to_doc]
+
+    def invoke(self, query):
+        docs_with_score = self.semantic_model.similarity_search_with_score(query=query, k=self.retriever_k)
+        relevance_dict = self._make_relevant_dict(docs_with_score)
+
+        bm25_docs = self.bm25.invoke(query)
+        bm25_rank = self._make_rank_dict(bm25_docs)
+
+        semantic_rank = self._score_2_rank(relevance_dict)
+
+        fusion_score = self._rank_fusion(semantic_rank, bm25_rank)
+
+        filtered_scores = self._filter_relevance(fusion_score, relevance_dict)
+        sorted_doc_ids = sorted(filtered_scores.keys(), key=lambda x: filtered_scores[x], reverse=True)
+        top_doc_ids = sorted_doc_ids[: self.ensemble_k]
+
+        final_docs = self._get_documents_by_ids(top_doc_ids, docs_with_score, bm25_docs)
+
+        return final_docs

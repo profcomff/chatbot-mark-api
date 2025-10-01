@@ -24,10 +24,8 @@ class Settings(BaseSettings):
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: list[str] = ["*"]
     CORS_ALLOW_HEADERS: list[str] = ["*"]
-
-    QDRANT_DIR: str = ""
-    GIGA_KEY_PATH: str = ""
-
+    QDRANT_API_KEY: str
+    GIGA_KEY_PATH: str
     GIGA_MAX_TOKENS: int = 500
     PROFANITY_CHECK: bool = True
     HOST: str = "127.0.0.1"
@@ -37,6 +35,8 @@ class Settings(BaseSettings):
     retrivier_k: int = 10
     MAX_BUTTONS: int = 5
     max_length: int = 200
+    collection_name: str = 'number_id_collect'
+    warning_message: str = ' Ответ сгенерирован ИИ и может содержать неточности.'
 
 
 @lru_cache

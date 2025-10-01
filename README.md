@@ -1,6 +1,24 @@
 # Ассистент
 
-## Запуск
+## Создание Векторной БД с нуля 
+1. Установите зависимости
+    ```console
+    pip install -r requirements.txt
+    ```
+
+2. Установите переменные окружения
+    ```console
+    export QDRANT_API_KEY="qdrant_api_key"
+    
+    export COLLECTION_NAME='collection_name' # Используйте не занятое
+    ```
+3. Запустите скрипт
+    ```console
+    cd scripts
+    
+    python create_qdrant_db.py 
+    ```
+## Запуск API
 
 1. Перейдите в папку проекта
 
@@ -27,8 +45,8 @@
 
 5. Установите переменные окружения
     ```console
-    # Путь до qdrant db (по умолчанию лежит в корневой папке проекта)
-    export QDRANT_DIR="qdrant_db"
+    # Ключ для доступа к бд
+    export QDRANT_API_KEY="qdrant_api_key"
 
     # Ключ для гигачат API
     export GIGA_KEY_PATH="gigakey.txt"

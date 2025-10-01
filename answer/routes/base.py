@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi_sqlalchemy import DBSessionMiddleware
+from langchain.retrievers import EnsembleRetriever
 from langchain_community.retrievers import BM25Retriever
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
@@ -32,10 +33,11 @@ from answer.schemas.api_models import (
 from answer.schemas.db_models import StatusMessage
 from answer.services import get_search_service
 from answer.settings import get_settings
+from llm.llm import get_answer
 from search.filter import length_filter
-from search.nn import init_embedder
+from search.nn import FilteredEnsembleRetriever, init_embedder
 from search.preprocess import preprocess_stem
-from search.search import generate_keywords_dict, get_documents_from_qdrant
+from search.search import generate_keywords_dict, get_context, get_documents_from_qdrant
 
 
 settings = get_settings()
@@ -123,26 +125,30 @@ async def init_resources():
 
     app.state.embedder = init_embedder()
 
-    app.state.qdrant_client = QdrantClient(path="./qdrant_db")
+    # Заглушка для тестирования
+    app.state.qdrant_client = None
 
-    app.state.vector_store = QdrantVectorStore(
-        client=app.state.qdrant_client,
-        collection_name="demo_collection",
-        embedding=app.state.embedder,
+    # Создаем мок-документы для тестирования
+    from langchain.schema import Document
+
+    documents = [
+        Document(
+            page_content="Тестовый документ о стипендиях", metadata={"source": "Стипендии", "key_words": "стипендия"}
+        )
+    ]
+
+    app.state.bm25_retriever = BM25Retriever.from_documents(
+        documents, preprocess_func=preprocess_stem, k=settings.retrivier_k
     )
 
-    documents = get_documents_from_qdrant(
-        client=app.state.qdrant_client,
-        collection_name="demo_collection",
-        page_content_field="page_content",
-        metadata_field="metadata",
-    )
+    # Заглушка для vector_store
+    app.state.vector_store = None
 
-    app.state.bm25_retriever = BM25Retriever.from_documents(documents, preprocess_func=preprocess_stem)
-
-    app.state.keywords_dict = generate_keywords_dict(
-        vector_store=app.state.vector_store, output_json_path="file/key_words_dict.json"
-    )
+    # Заглушки для ретриверов
+    app.state.vector_retriever = None
+    app.state.ensemble_retriever = None
+    app.state.filtered_ensemble_retriever = None
+    app.state.keywords_dict = {}
 
     app_state_dict = {
         "credentials": app.state.credentials,
@@ -190,6 +196,17 @@ async def generate_response(user_input: UserInput):
                 "results": [],
                 "ai_answer": 'Ваш запрос слишком длинный :( Сделайте короче или используйте режим безGPT.',
             }
+    else:
+        # Заглушка для режима без AI - возвращаем тестовый результат
+        return {
+            "results": [
+                {
+                    "topic": "Тестовая тема",
+                    "full_text": "Это тестовый ответ для проверки работы бота без AI",
+                    "metadata": {},
+                }
+            ]
+        }
 
 
 @app.post("/users", response_model=UserResponse)

@@ -52,7 +52,7 @@ jobs:
     environment:
       name: Testing
     env:
-      CONTAINER_NAME: com_profcomff_tgbot_print_test
+      CONTAINER_NAME: com_profcomff_tgbot_mark_test
     permissions:
       packages: read
     steps:
@@ -94,7 +94,7 @@ jobs:
     environment:
       name: Production
     env:
-      CONTAINER_NAME: com_profcomff_tgbot_print
+      CONTAINER_NAME: com_profcomff_tgbot_mark
     permissions:
       packages: read
     steps:

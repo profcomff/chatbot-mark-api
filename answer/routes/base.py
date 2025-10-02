@@ -120,8 +120,7 @@ async def init_resources():
 
     bot, dp = await bot_startup()
     app.state.bot = bot
-    with open(settings.GIGA_KEY_PATH, "r") as f:
-        app.state.credentials = f.read().strip()
+    app.state.credentials = settings.GIGA_KEY
 
     app.state.embedder = init_embedder()
 

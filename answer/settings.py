@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     CORS_ALLOW_METHODS: list[str] = ["*"]
     CORS_ALLOW_HEADERS: list[str] = ["*"]
     QDRANT_API_KEY: str
-    GIGA_KEY_PATH: str
+    GIGA_KEY: str
     GIGA_MAX_TOKENS: int = 500
     PROFANITY_CHECK: bool = True
     HOST: str = "127.0.0.1"

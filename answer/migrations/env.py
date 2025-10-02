@@ -3,6 +3,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 from answer.settings import Settings, get_settings
+from answer.models.db import BaseDbModel
 
 config = context.config
 settings: Settings = get_settings()
@@ -10,7 +11,7 @@ settings: Settings = get_settings()
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = Base.metadata  # type: ignore
+target_metadata = BaseDbModel.metadata  # type: ignore
 
 
 def run_migrations_offline() -> None:

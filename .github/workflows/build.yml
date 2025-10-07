@@ -124,6 +124,6 @@ jobs:
             --env BASE_URL='${{ vars.BASE_URL }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
-            --env GIGA_KEY_PATH='${{ secrets.GIGA_KEY }}' \
+            --env GIGA_KEY='${{ secrets.GIGA_KEY }}' \
             --name ${{ env.CONTAINER_NAME }} \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest

@@ -62,6 +62,7 @@ jobs:
         run: |
           docker run \
             --rm \
+            --network=web \
             --env DB_DSN='${{ secrets.DB_DSN }}' \
             --env BOT_TOKEN='${{ secrets.BOT_TOKEN }}' \
             --env BASE_URL='${{ vars.BASE_URL }}' \
@@ -76,6 +77,7 @@ jobs:
           docker stop ${{ env.CONTAINER_NAME }} || true && docker rm ${{ env.CONTAINER_NAME }} || true
           docker run \
             --detach \
+            --network=web \
             --restart on-failure:3 \
             --env DB_DSN='${{ secrets.DB_DSN }}' \
             --env BOT_TOKEN='${{ secrets.BOT_TOKEN }}' \
@@ -104,6 +106,7 @@ jobs:
         run: |
           docker run \
             --rm \
+            --network=web \
             --env DB_DSN='${{ secrets.DB_DSN }}' \
             --env BOT_TOKEN='${{ secrets.BOT_TOKEN }}' \
             --env BASE_URL='${{ vars.BASE_URL }}' \
@@ -118,6 +121,7 @@ jobs:
           docker stop ${{ env.CONTAINER_NAME }} || true && docker rm ${{ env.CONTAINER_NAME }} || true
           docker run \
             --detach \
+            --network=web \
             --restart always \
             --env DB_DSN='${{ secrets.DB_DSN }}' \
             --env BOT_TOKEN='${{ secrets.BOT_TOKEN }}' \

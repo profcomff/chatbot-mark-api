@@ -30,5 +30,6 @@ COPY . .
 
 # Проверка структуры проекта (после COPY)
 RUN ls -lR /app
+RUN curl -o /app/llm/russian_trusted_root_ca.crt "https://gu-st.ru/content/Other/doc/russiantrustedca.pem"
 
 CMD ["uvicorn", "answer.routes.base:app", "--host", "0.0.0.0", "--port", "8000"]

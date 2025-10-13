@@ -185,41 +185,58 @@ async def shutdown_resources():
 async def generate_response(user_input: UserInput):
     if not user_input.text:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
-
+    
+    if user_input.generate_ai_response:
+        ensemble_retriever = app.state.ensemble_retriever
+    else:
+        ensemble_retriever = app.state.filtered_ensemble_retriever
+        
+    results, combined_text = get_context(
+        query=user_input.text,
+        key_words_dict=app.state.keywords_dict,
+        ensemble_retriever=ensemble_retriever,
+        vector_store=app.state.vector_store,
+        ensemble_k=settings.ensemble_k,
+        verbose=True,
+    )
+    
+    formatted_results = [
+        {
+            "topic": getattr(r, 'topic', ''),
+            "full_text": getattr(r, 'full_text', str(r)),
+            "metadata": getattr(r, 'metadata', {})
+        } 
+        for r in results
+    ]
+    
     if user_input.generate_ai_response:
         if length_filter(text=user_input.text, max_len=settings.max_length):
-            result = await search_service.search_and_generate(user_input)
-
-            if result.message:
-                return {"message": result.message}
-
-            response = {
-                "results": [
-                    {"topic": r.topic, "full_text": r.full_text, "metadata": r.metadata or {}} for r in result.results
-                ]
-            }
-
-            if result.ai_answer:
-                response["ai_answer"] = result.ai_answer
-
+            ai_answer = get_answer(
+                context=combined_text, 
+                question=user_input.text, 
+                credentials=app.state.credentials,
+                settings=settings,
+            )
+            
+            response = {"results": formatted_results}
+            if ai_answer:
+                response["ai_answer"] = ai_answer
+                
             return response
-        else:
+        else: 
             return {
-                "results": [],
-                "ai_answer": 'Ваш запрос слишком длинный :( Сделайте короче или используйте режим безGPT.',
+                "results": [], 
+                "ai_answer": 'Ваш запрос слишком длинный :( Сделайте короче или используйте режим без GPT.'
             }
-    else:
-        # Заглушка для режима без AI - возвращаем тестовый результат
+    
+    if len(formatted_results) > 0:
+        return {"results": formatted_results}
+    else:             
         return {
-            "results": [
-                {
-                    "topic": "Тестовая тема",
-                    "full_text": "Это тестовый ответ для проверки работы бота без AI",
-                    "metadata": {},
-                }
-            ]
-        }
-
+            "results": [], 
+            "ai_answer": 'Извините, я не понял Ваш запрос. Попробуйте использовать GPT версию.'
+        }       
+    
 
 @app.post("/users", response_model=UserResponse)
 async def create_user(user_request: CreateUserRequest):

@@ -67,7 +67,9 @@ jobs:
             --env BASE_URL='${{ vars.BASE_URL }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
-            --env GIGA_KEY_PATH='${{ secrets.GIGA_KEY }}' \
+            --env GIGA_KEY='${{ secrets.GIGA_KEY }}' \
+            --env HOST='${{ vars.HOST }}' \
+            --env PORT='${{ vars.PORT }}' \
             --name ${{ env.CONTAINER_NAME }}_migration \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test \
             alembic upgrade head
@@ -82,7 +84,9 @@ jobs:
             --env BASE_URL='${{ vars.BASE_URL }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
-            --env GIGA_KEY_PATH='${{ secrets.GIGA_KEY }}' \
+            --env GIGA_KEY='${{ secrets.GIGA_KEY }}' \
+            --env HOST='${{ vars.HOST }}' \
+            --env PORT='${{ vars.PORT }}' \
             --name ${{ env.CONTAINER_NAME }} \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
 
@@ -109,7 +113,9 @@ jobs:
             --env BASE_URL='${{ vars.BASE_URL }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
-            --env GIGA_KEY_PATH='${{ secrets.GIGA_KEY }}' \
+            --env GIGA_KEY='${{ secrets.GIGA_KEY }}' \
+            --env HOST='${{ vars.HOST }}' \
+            --env PORT='${{ vars.PORT }}' \
             --name ${{ env.CONTAINER_NAME }}_migration \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
             alembic upgrade head
@@ -125,5 +131,8 @@ jobs:
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
             --env GIGA_KEY='${{ secrets.GIGA_KEY }}' \
+            --env GIGA_KEY='${{ secrets.GIGA_KEY }}' \
+            --env HOST='${{ vars.HOST }}' \
+            --env PORT='${{ vars.PORT }}' \          
             --name ${{ env.CONTAINER_NAME }} \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest

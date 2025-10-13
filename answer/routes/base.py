@@ -124,30 +124,43 @@ async def init_resources():
 
     app.state.embedder = init_embedder()
 
-    # Заглушка для тестирования
-    app.state.qdrant_client = None
-
-    # Создаем мок-документы для тестирования
-    from langchain.schema import Document
-
-    documents = [
-        Document(
-            page_content="Тестовый документ о стипендиях", metadata={"source": "Стипендии", "key_words": "стипендия"}
-        )
-    ]
+    app.state.qdrant_client = QdrantClient(
+        url="http://qdrant.profcomff.com:6333",
+        api_key=settings.QDRANT_API_KEY
+    )
+    
+    documents = get_documents_from_qdrant(
+        client=app.state.qdrant_client,
+        collection_name=settings.collection_name,
+        page_content_field="page_content",
+        metadata_field="metadata"
+    )
 
     app.state.bm25_retriever = BM25Retriever.from_documents(
         documents, preprocess_func=preprocess_stem, k=settings.retrivier_k
     )
 
-    # Заглушка для vector_store
-    app.state.vector_store = None
+    app.state.vector_store = QdrantVectorStore(
+        client=app.state.qdrant_client,
+        collection_name=settings.collection_name,
+        embedding=app.state.embedder,
+    )
 
-    # Заглушки для ретриверов
-    app.state.vector_retriever = None
-    app.state.ensemble_retriever = None
-    app.state.filtered_ensemble_retriever = None
-    app.state.keywords_dict = {}
+    app.state.vector_retriever = app.state.vector_store.as_retriever(search_kwargs={"k": settings.retrivier_k})
+    
+    app.state.ensemble_retriever = EnsembleRetriever(retrievers=[app.state.bm25_retriever, app.state.vector_retriever], 
+                                                    weights=[0.5, 0.5])
+        
+    app.state.filtered_ensemble_retriever = FilteredEnsembleRetriever(app.state.vector_store, 
+                                                                      app.state.bm25_retriever, 
+                                                                      retriever_k=settings.retrivier_k, 
+                                                                      ensemble_k=settings.ensemble_k)
+        
+    app.state.keywords_dict = generate_keywords_dict(
+        vector_store=app.state.vector_store, 
+        output_json_path="file/key_words_dict.json"
+    )
+
 
     app_state_dict = {
         "credentials": app.state.credentials,

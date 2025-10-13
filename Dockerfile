@@ -18,7 +18,6 @@ RUN apt-get update && \
               nltk.download('stopwords', download_dir='/app/nltk_data'); \
               nltk.download('punkt_tab', download_dir='/app/nltk_data'); \
               nltk.download('punkt', download_dir='/app/nltk_data')" && \
-    wget -O /app/llm/russian_trusted_root_ca.crt https://gu-st.ru/content/Other/doc/russiantrustedca.pem && \
     apt-get remove -y wget && \
     rm -rf /var/lib/apt/lists/*
 
@@ -28,7 +27,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Копирование исходного кода
 COPY . .
-COPY russiantrustedca.pem /app/llm/russian_trusted_root_ca.crt
+COPY russian_trusted_root_ca.crt /app/llm/russian_trusted_root_ca.crt
 
 # Проверка структуры проекта (после COPY)
 RUN ls -lR /app

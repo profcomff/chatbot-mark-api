@@ -28,6 +28,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Копирование исходного кода
 COPY . .
+COPY russiantrustedca.pem /app/llm/russian_trusted_root_ca.crt
 
 # Проверка структуры проекта (после COPY)
 RUN ls -lR /app

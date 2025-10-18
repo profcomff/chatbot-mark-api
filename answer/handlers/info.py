@@ -3,7 +3,7 @@ import logging
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-from answer.handlers.keyboards import get_base_menu, get_menu_from_help, get_menu_from_info
+from answer.handlers.keyboards import get_menu_from_help, get_menu_from_info
 from answer.utils.validation import validate_callback_query
 
 
@@ -59,7 +59,7 @@ async def get_faq(callback: CallbackQuery):
 Марк может отвечать на вопросы, связанные с деятельностью Профкома и студенческой жизнью.
 
 <b>Как задать вопрос?</b>
-Нажмите кнопку "Спросить Марка" и напишите свой вопрос.
+Напишите свой вопрос.
 
 <b>Марк не понимает мой вопрос. Что делать?</b>
 Попробуйте переформулировать вопрос или обратитесь в поддержку.

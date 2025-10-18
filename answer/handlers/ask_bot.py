@@ -1,25 +1,12 @@
-import asyncio
-import json
 import logging
 
 import httpx
-from aiogram import F, Router
-from aiogram.filters import StateFilter
-from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram import Router
+from aiogram.types import Message
 
-from answer.handlers.keyboards import (
-    get_base_menu,
-    get_no_results_keyboard,
-    get_response_type_keyboard,
-    get_topics_keyboard,
-)
-from answer.handlers.states import QuestionState, TopicState
 from answer.settings import Settings, get_settings
 from answer.utils.validation import (
     get_safe_user_info,
-    sanitize_text_for_logging,
-    validate_callback_query,
     validate_message,
     validate_question,
 )
@@ -84,31 +71,12 @@ async def save_conversation_api(user_chat_id: str, request: str, response: str, 
         return False
 
 
-@router.callback_query(F.data == "ask_llm")
-async def ask_bot_mark(callback: CallbackQuery, state: FSMContext):
-    """Обработчик нажатия кнопки 'Спросить Марка'"""
+@router.message()
+async def handle_any_message(message: Message):
+    """Обработчик любого вопроса"""
     try:
-        validation_result = validate_callback_query(callback)
-        if not validation_result.is_valid:
-            logger.warning(f"Невалидный callback от пользователя {callback.from_user.id}: {validation_result.error}")
-            await callback.answer("❌ Ошибка валидации данных")
+        if not message.text or message.text.startswith('/'):
             return
-
-        await state.set_state(QuestionState.waiting_for_question)
-        await callback.message.answer(
-            "❓ <b>Задайте ваш вопрос</b>\n\n" "Напишите, что вас интересует, и я помогу найти ответ!"
-        )
-        await callback.answer()
-        logger.info(f"Пользователь {callback.from_user.id} перешел в режим ввода вопроса")
-    except Exception as e:
-        logger.error(f"Ошибка в ask_bot_mark: {e}", exc_info=True)
-        await callback.answer("Произошла ошибка. Попробуйте позже.")
-
-
-@router.message(StateFilter(QuestionState.waiting_for_question))
-async def process_question(message: Message, state: FSMContext):
-    """Обработчик получения вопроса от пользователя"""
-    try:
         message_validation = validate_message(message)
         if not message_validation.is_valid:
             safe_user = get_safe_user_info(message)
@@ -128,88 +96,35 @@ async def process_question(message: Message, state: FSMContext):
 
         validated_question = question_validation.data['question']
 
-        await state.update_data(
-            user_question=validated_question, chat_id=str(message.chat.id), user_id=message.from_user.id
+        search_message = await message.answer("🔍 Ищу информацию и готовлю развернутый ответ...")
+
+        api_result = await call_internal_api(
+            text=validated_question, chat_id=str(message.chat.id), generate_ai_response=True
         )
-
-        keyboard = await get_response_type_keyboard()
-        await message.answer(
-            f"📝 <b>Ваш вопрос:</b> {validated_question}\n\n" "🔽 <b>Выберите тип ответа:</b>",
-            reply_markup=keyboard.as_markup(),
-        )
-
-        await state.set_state(QuestionState.waiting_for_response_type)
-        safe_question = sanitize_text_for_logging(validated_question, 50)
-        logger.info(f"Получен валидный вопрос от пользователя {message.from_user.id}: {safe_question}")
-
-    except Exception as e:
-        logger.error(f"Ошибка обработки вопроса: {e}", exc_info=True)
-        await message.answer("Произошла ошибка при обработке вопроса. Попробуйте еще раз.")
-        await state.clear()
-
-
-@router.callback_query(F.data == "response_detailed", StateFilter(QuestionState.waiting_for_response_type))
-async def handle_detailed_response(callback: CallbackQuery, state: FSMContext):
-    """Обработчик выбора развернутого ответа"""
-    try:
-        validation_result = validate_callback_query(callback)
-        if not validation_result.is_valid:
-            logger.warning(f"Невалидный callback от пользователя {callback.from_user.id}: {validation_result.error}")
-            await callback.answer("❌ Ошибка валидации данных")
-            await state.clear()
-            return
-
-        data = await state.get_data()
-        user_question = data.get("user_question")
-        chat_id = data.get("chat_id")
-
-        if not user_question or not chat_id:
-            logger.warning(f"Отсутствуют данные в состоянии для пользователя {callback.from_user.id}")
-            await callback.answer("❌ Ошибка: данные вопроса не найдены")
-            await state.clear()
-            return
-
-        question_validation = validate_question(user_question)
-        if not question_validation.is_valid:
-            logger.warning(
-                f"Невалидный сохраненный вопрос от пользователя {callback.from_user.id}: {question_validation.error}"
-            )
-            await callback.answer("❌ Ошибка: невалидные данные вопроса")
-            await state.clear()
-            return
-
-        await callback.message.edit_text("🔍 Ищу информацию и готовлю развернутый ответ...")
-
-        api_result = await call_internal_api(text=user_question, chat_id=chat_id, generate_ai_response=True)
 
         if not api_result or not api_result.get("ai_answer"):
-            no_results_keyboard = await get_no_results_keyboard()
-            await callback.message.edit_text(
+            await search_message.delete()
+
+            await message.answer(
                 "😕 К сожалению, не удалось получить ответ на ваш вопрос.\n"
-                "Попробуйте переформулировать вопрос или выберите действие:",
-                reply_markup=no_results_keyboard.as_markup(),
+                "Попробуйте переформулировать вопрос и задать его снова."
             )
-            await state.clear()
             return
 
         answer = api_result["ai_answer"]
 
-        await save_conversation_api(chat_id, user_question, answer, is_response_with_buttons=False)
+        await save_conversation_api(str(message.chat.id), validated_question, answer, is_response_with_buttons=False)
+        await search_message.delete()
+        await message.answer(f"💡 <b>Ответ:</b>\n\n{answer}")
 
-        await callback.message.edit_text(f"💡 <b>Ответ:</b>\n\n{answer}")
-
-        menu_keyboard = await get_base_menu()
-        await callback.message.answer("❓ Есть еще вопросы?", reply_markup=menu_keyboard.as_markup())
-
-        await state.clear()
-        logger.info(f"Отправлен развернутый ответ пользователю {callback.from_user.id}")
+        logger.info(f"Отправлен развернутый ответ пользователю {message.from_user.id}")
 
     except Exception as e:
-        logger.error(f"Ошибка получения развернутого ответа: {e}", exc_info=True)
-        await callback.answer("Произошла ошибка при получении ответа.")
-        await state.clear()
+        logger.error(f"Ошибка обработки сообщения: {e}", exc_info=True)
+        await message.answer("Произошла ошибка при обработке вашего вопроса. Попробуйте еще раз.")
 
 
+'''
 @router.callback_query(F.data == "response_buttons", StateFilter(QuestionState.waiting_for_response_type))
 async def handle_buttons_response(callback: CallbackQuery, state: FSMContext):
     """Обработчик выбора ответа с кнопками"""
@@ -395,3 +310,4 @@ async def handle_topic_selection(callback: CallbackQuery, state: FSMContext):
         logger.error(f"Ошибка выбора топика: {e}", exc_info=True)
         await callback.answer("❌ Произошла ошибка при получении информации по топику.")
         await state.clear()
+'''

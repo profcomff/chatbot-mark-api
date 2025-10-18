@@ -1,11 +1,9 @@
-import datetime
 import logging
 
 import httpx
 from aiogram import F, Router
 from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, Message
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from answer.handlers.keyboards import get_base_menu
 from answer.settings import Settings, get_settings

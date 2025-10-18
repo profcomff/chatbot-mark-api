@@ -1,10 +1,8 @@
-import asyncio
 import logging
 
 from aiogram import Router
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from answer.routes.user import get_user_by_chat_id
 from answer.settings import Settings, get_settings
 
 
@@ -15,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 async def get_base_menu() -> InlineKeyboardBuilder:
     builder: InlineKeyboardBuilder = InlineKeyboardBuilder()
-    builder.button(text="Спросить Марка", callback_data="ask_llm")
     builder.button(text="FAQ", callback_data="info")
     builder.button(text="Поддержка", callback_data="help")
     builder.adjust(1, 2)
@@ -24,7 +21,6 @@ async def get_base_menu() -> InlineKeyboardBuilder:
 
 async def get_menu_from_info() -> InlineKeyboardBuilder:
     builder: InlineKeyboardBuilder = InlineKeyboardBuilder()
-    builder.button(text="Спросить Марка", callback_data="ask_llm")
     builder.button(text="Поддержка", callback_data="help")
     builder.button(text="В главное меню", callback_data="back_to_menu")
     builder.adjust(1, 2)
@@ -33,7 +29,6 @@ async def get_menu_from_info() -> InlineKeyboardBuilder:
 
 async def get_menu_from_help() -> InlineKeyboardBuilder:
     builder: InlineKeyboardBuilder = InlineKeyboardBuilder()
-    builder.button(text="Спросить Марка", callback_data="ask_llm")
     builder.button(text="FAQ", callback_data="info")
     builder.button(text="В главное меню", callback_data="back_to_menu")
     builder.adjust(1, 2)
@@ -42,7 +37,6 @@ async def get_menu_from_help() -> InlineKeyboardBuilder:
 
 async def get_ask_bot_keyboard() -> InlineKeyboardBuilder:
     builder: InlineKeyboardBuilder = InlineKeyboardBuilder()
-    builder.button(text="Спросить Марка", callback_data="ask_llm")
     builder.button(text="FAQ", callback_data="info")
     builder.button(text="В главное меню", callback_data="back_to_menu")
     builder.adjust(1, 2)

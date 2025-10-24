@@ -1,18 +1,33 @@
-import os
+import re
+import json
+import jwt
+import requests as r
+from time import time, sleep
+from cachetools import cached, TTLCache
 from pathlib import Path
 
-from gigachat import GigaChat
-from gigachat.models import Chat, Messages
-
-
 PROMPT_PATH = Path(__file__).parent / "prompt.txt"
-CA_BUNDLE_PATH = Path(__file__).parent / "russian_trusted_root_ca.crt"
 
-
-def get_giga_client(credentials):
-
-    giga = GigaChat(credentials=credentials, ca_bundle_file=str(CA_BUNDLE_PATH), verify_ssl_certs=True)
-    return giga
+@cached(cache=TTLCache(maxsize=1024, ttl=3600))
+def get_ya_token(private_key: str, service_id: str, key_id: str):
+    now = int(time())
+    payload = {
+        "aud": "https://iam.api.cloud.yandex.net/iam/v1/tokens",
+        "iss": service_id,
+        "iat": now,
+        "exp": now + 360,
+    }
+    
+    encoded_token = jwt.encode(
+        payload, private_key, algorithm="PS256", headers={"kid": key_id}
+    )
+    
+    iam_token = r.post(
+        "https://iam.api.cloud.yandex.net/iam/v1/tokens", json={"jwt": encoded_token}
+    )
+    if iam_token.status_code != 200:
+        raise Exception("Wrong IAM token response")
+    return iam_token.json()["iamToken"]
 
 
 def load_system_prompt():
@@ -23,20 +38,34 @@ def load_system_prompt():
 
 def format_messages(context, question):
     return [
-        Messages(role="system", content=load_system_prompt()),
-        Messages(role="user", content=f"Контекст: {context}\nВопрос: {question}"),
+        {"role": "system", "text": load_system_prompt()},
+        {"role": "user", "text": f"Контекст: {context}\n Вопрос: {question}"},
     ]
 
+def get_answer(context, question, settings):
 
-def get_answer(context, question, credentials, settings):
-    giga = get_giga_client(credentials)
-
-    chat = Chat(
-        messages=format_messages(context, question),
-        max_tokens=settings.GIGA_MAX_TOKENS,
-        profanity_check=settings.PROFANITY_CHECK,
+    client = {"token": get_ya_token(settings.PRIVATE_KEY, settings.SERVICE_ACCOUNT_ID, settings.KEY_ID), "folder_id": "b1ggivrnbg1ftsr8no1s"}
+    
+    values = {
+        "modelUri": "gpt://b1ggivrnbg1ftsr8no1s/yandexgpt-lite/latest",
+        "completionOptions": {
+            "stream": False,
+            "temperature": 0.6,
+            "maxTokens": str(settings.LLM_MAX_OUTPUT)
+        },
+        "messages": format_messages(context, question)
+    }
+    
+    resp = r.post(
+        "https://llm.api.cloud.yandex.net/foundationModels/v1/completion", 
+        json=values, 
+        headers={"Authorization": f"Bearer {client['token']}", "x-folder-id": "b1ggivrnbg1ftsr8no1s"}
     )
-
-    response = giga.chat(chat)
-
-    return response.choices[0].message.content + '\n' + settings.warning_message
+    
+    if resp.status_code != 200:
+        raise Exception(f"Yagpt error: {resp.text}")
+        
+    response_data = resp.json()
+    answer = response_data['result']['alternatives'][0]['message']['text']
+    
+    return answer + '\n' + settings.warning_message

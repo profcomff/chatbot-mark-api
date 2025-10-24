@@ -22,20 +22,14 @@
 
 1. Перейдите в папку проекта
 
-2. Установите сертификаты Минцифры (для работы Гигачат API)
-    ```console
-    cd llm
-    curl -o russian_trusted_root_ca.crt "https://gu-st.ru/content/Other/doc/russiantrustedca.pem"
-    ```
-
-3. Создайте виртуальное окружение и активируйте его:
+2. Создайте виртуальное окружение и активируйте его:
     ```console
     python3 -m venv venv
     source ./venv/bin/activate  # На MacOS и Linux
     venv\Scripts\activate     # На Windows
     ```
 
-4. Установите зависимости
+3. Установите зависимости
     ```console
     pip install -r requirements.txt
     ```
@@ -43,26 +37,27 @@
     python -m nltk.downloader punkt_tab
     ```
 
-5. Установите переменные окружения
+4. Установите переменные окружения
     ```console
     # Ключ для доступа к бд
     export QDRANT_API_KEY="qdrant_api_key"
-
-    # Ключ для гигачат API
-    export GIGA_KEY_PATH="gigakey.txt"
+    
+    export SERVICE_ACCOUNT_ID="FROM YAGPT"
+    
+    export KEY_ID="FROM YAGPT"
+    
+    export PRIVATE_KEY="FROM YAGPT"
+    
+    EXPORT BOT_TOKEN="FROM YAGPT"
     ```
 
-6. Запустите приложение
+5. Запустите приложение
     ```console
     python -m answer
     ```
     
 ## Запуск через Docker
 ```console
-# Установка сертификатов
-cd llm
-curl -o russian_trusted_root_ca.crt "https://gu-st.ru/content/Other/doc/russiantrustedca.pem"
-
 # Сборка образа
 docker build -t my-fastapi-langchain .
 

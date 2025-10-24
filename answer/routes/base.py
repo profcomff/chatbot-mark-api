@@ -120,7 +120,6 @@ async def init_resources():
 
     bot, dp = await bot_startup()
     app.state.bot = bot
-    app.state.credentials = settings.GIGA_KEY
 
     app.state.embedder = init_embedder()
 
@@ -163,7 +162,6 @@ async def init_resources():
 
 
     app_state_dict = {
-        "credentials": app.state.credentials,
         "embedder": app.state.embedder,
         "qdrant_client": app.state.qdrant_client,
         "vector_store": app.state.vector_store,
@@ -214,7 +212,6 @@ async def generate_response(user_input: UserInput):
             ai_answer = get_answer(
                 context=combined_text, 
                 question=user_input.text, 
-                credentials=app.state.credentials,
                 settings=settings,
             )
             

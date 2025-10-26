@@ -55,25 +55,6 @@
     ```console
     python -m answer
     ```
-    
-## Запуск через Docker
-```console
-# Сборка образа
-docker build -t my-fastapi-langchain .
-
-# Поднятие контейнера
-docker run -d \
-  -p 127.0.0.1:8000:8000 \
-  --name my-fastapi-langchain \
-  -v "/Локальный/путь/до/chroma_db:/app/chroma_db" \
-  -v "/Локальный/путь/до/gigakey.txt:/app/gigakey.txt:ro" \
-  -e CHROMA_DIR="/app/chroma_db" \
-  -e GIGA_KEY_PATH="/app/gigakey.txt" \
-  -e APP_MODULE="answer.routes.base:app" \
-  -e PYTHONPATH="/app" \
-  my-fastapi-langchain  
-```
-
 
 ## ENV-file description
 - `DB_DSN=postgresql://postgres@localhost:5432/postgres` – Данные для подключения к БД

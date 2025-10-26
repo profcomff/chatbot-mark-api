@@ -144,6 +144,6 @@ jobs:
             --env SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}' \
             --env KEY_ID='${{ secrets.KEY_ID }}' \
             --env HOST='${{ vars.HOST }}' \
-            --env PORT='${{ vars.PORT }}' \          
+            --env PORT='${{ vars.PORT }}' \
             --name ${{ env.CONTAINER_NAME }} \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest

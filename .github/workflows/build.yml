@@ -86,7 +86,9 @@ jobs:
             --env BASE_URL='${{ vars.BASE_URL }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
-            --env GIGA_KEY='${{ secrets.GIGA_KEY }}' \
+            --env PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}' \
+            --env SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}' \
+            --env KEY_ID='${{ secrets.KEY_ID }}' \
             --env HOST='${{ vars.HOST }}' \
             --env PORT='${{ vars.PORT }}' \
             --name ${{ env.CONTAINER_NAME }} \
@@ -116,7 +118,9 @@ jobs:
             --env BASE_URL='${{ vars.BASE_URL }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
-            --env GIGA_KEY='${{ secrets.GIGA_KEY }}' \
+            --env PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}' \
+            --env SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}' \
+            --env KEY_ID='${{ secrets.KEY_ID }}' \
             --env HOST='${{ vars.HOST }}' \
             --env PORT='${{ vars.PORT }}' \
             --name ${{ env.CONTAINER_NAME }}_migration \
@@ -134,8 +138,9 @@ jobs:
             --env BASE_URL='${{ vars.BASE_URL }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
-            --env GIGA_KEY='${{ secrets.GIGA_KEY }}' \
-            --env GIGA_KEY='${{ secrets.GIGA_KEY }}' \
+            --env PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}' \
+            --env SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}' \
+            --env KEY_ID='${{ secrets.KEY_ID }}' \
             --env HOST='${{ vars.HOST }}' \
             --env PORT='${{ vars.PORT }}' \          
             --name ${{ env.CONTAINER_NAME }} \

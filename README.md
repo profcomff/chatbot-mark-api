@@ -41,14 +41,17 @@
     ```console
     # Ключ для доступа к бд
     export QDRANT_API_KEY="qdrant_api_key"
-    
+
+    # Токен ТГ Бота
+    EXPORT BOT_TOKEN="FROM YAGPT"
+
+    # Токен YandexGPT
     export SERVICE_ACCOUNT_ID="FROM YAGPT"
     
     export KEY_ID="FROM YAGPT"
     
     export PRIVATE_KEY="FROM YAGPT"
     
-    EXPORT BOT_TOKEN="FROM YAGPT"
     ```
 
 5. Запустите приложение

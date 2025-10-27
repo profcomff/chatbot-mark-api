@@ -58,41 +58,50 @@ jobs:
     steps:
       - name: Pull new version
         run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
+      
+      - name: Create env file for migration
+        run: |
+          cat > migration.env << EOF
+          DB_DSN=${{ secrets.DB_DSN }}
+          BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+          BASE_URL=${{ vars.BASE_URL }}
+          WEBHOOK_PATH=${{ vars.WEBHOOK_PATH }}
+          QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
+          PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}
+          SERVICE_ACCOUNT_ID=${{ secrets.SERVICE_ACCOUNT_ID }}
+          KEY_ID=${{ secrets.KEY_ID }}
+          HOST=${{ vars.HOST }}
+          PORT=${{ vars.PORT }}
+          EOF
+      
       - name: Migrate DB
         run: |
-          docker run \
-            --rm \
-            --network=web \
-            --env DB_DSN='${{ secrets.DB_DSN }}' \
-            --env BOT_TOKEN='${{ secrets.BOT_TOKEN }}' \
-            --env BASE_URL='${{ vars.BASE_URL }}' \
-            --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
-            --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
-            --env PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}' \
-            --env SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}' \
-            --env KEY_ID='${{ secrets.KEY_ID }}' \
-            --env HOST='${{ vars.HOST }}' \
-            --env PORT='${{ vars.PORT }}' \
+          docker run --rm --network=web --env-file migration.env \
             --name ${{ env.CONTAINER_NAME }}_migration \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test \
             alembic upgrade head
+            
+      - name: Create env file for container
+        run: |
+          cat > container.env << EOF
+          DB_DSN=${{ secrets.DB_DSN }}
+          BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+          BASE_URL=${{ vars.BASE_URL }}
+          WEBHOOK_PATH=${{ vars.WEBHOOK_PATH }}
+          QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
+          PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}
+          SERVICE_ACCOUNT_ID=${{ secrets.SERVICE_ACCOUNT_ID }}
+          KEY_ID=${{ secrets.KEY_ID }}
+          HOST=${{ vars.HOST }}
+          PORT=${{ vars.PORT }}
+          EOF
+      
       - name: Run new version
         run: |
-          docker stop ${{ env.CONTAINER_NAME }} || true && docker rm ${{ env.CONTAINER_NAME }} || true
-          docker run \
-            --detach \
-            --network=web \
-            --restart on-failure:3 \
-            --env DB_DSN='${{ secrets.DB_DSN }}' \
-            --env BOT_TOKEN='${{ secrets.BOT_TOKEN }}' \
-            --env BASE_URL='${{ vars.BASE_URL }}' \
-            --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
-            --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
-            --env PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}' \
-            --env SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}' \
-            --env KEY_ID='${{ secrets.KEY_ID }}' \
-            --env HOST='${{ vars.HOST }}' \
-            --env PORT='${{ vars.PORT }}' \
+          docker stop ${{ env.CONTAINER_NAME }} || true
+          docker rm ${{ env.CONTAINER_NAME }} || true
+          docker run --detach --network=web --restart on-failure:3 \
+            --env-file container.env \
             --name ${{ env.CONTAINER_NAME }} \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:test
 
@@ -110,40 +119,49 @@ jobs:
     steps:
       - name: Pull new version
         run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      
+      - name: Create env file for migration
+        run: |
+          cat > migration.env << EOF
+          DB_DSN=${{ secrets.DB_DSN }}
+          BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+          BASE_URL=${{ vars.BASE_URL }}
+          WEBHOOK_PATH=${{ vars.WEBHOOK_PATH }}
+          QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
+          PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}
+          SERVICE_ACCOUNT_ID=${{ secrets.SERVICE_ACCOUNT_ID }}
+          KEY_ID=${{ secrets.KEY_ID }}
+          HOST=${{ vars.HOST }}
+          PORT=${{ vars.PORT }}
+          EOF
+      
       - name: Migrate DB
         run: |
-          docker run \
-            --rm \
-            --network=web \
-            --env DB_DSN='${{ secrets.DB_DSN }}' \
-            --env BOT_TOKEN='${{ secrets.BOT_TOKEN }}' \
-            --env BASE_URL='${{ vars.BASE_URL }}' \
-            --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
-            --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
-            --env PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}' \
-            --env SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}' \
-            --env KEY_ID='${{ secrets.KEY_ID }}' \
-            --env HOST='${{ vars.HOST }}' \
-            --env PORT='${{ vars.PORT }}' \
+          docker run --rm --network=web --env-file migration.env \
             --name ${{ env.CONTAINER_NAME }}_migration \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
             alembic upgrade head
+            
+      - name: Create env file for container
+        run: |
+          cat > container.env << EOF
+          DB_DSN=${{ secrets.DB_DSN }}
+          BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+          BASE_URL=${{ vars.BASE_URL }}
+          WEBHOOK_PATH=${{ vars.WEBHOOK_PATH }}
+          QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
+          PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}
+          SERVICE_ACCOUNT_ID=${{ secrets.SERVICE_ACCOUNT_ID }}
+          KEY_ID=${{ secrets.KEY_ID }}
+          HOST=${{ vars.HOST }}
+          PORT=${{ vars.PORT }}
+          EOF
+      
       - name: Run new version
         run: |
-          docker stop ${{ env.CONTAINER_NAME }} || true && docker rm ${{ env.CONTAINER_NAME }} || true
-          docker run \
-            --detach \
-            --network=web \
-            --restart always \
-            --env DB_DSN='${{ secrets.DB_DSN }}' \
-            --env BOT_TOKEN='${{ secrets.BOT_TOKEN }}' \
-            --env BASE_URL='${{ vars.BASE_URL }}' \
-            --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
-            --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
-            --env PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}' \
-            --env SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}' \
-            --env KEY_ID='${{ secrets.KEY_ID }}' \
-            --env HOST='${{ vars.HOST }}' \
-            --env PORT='${{ vars.PORT }}' \
+          docker stop ${{ env.CONTAINER_NAME }} || true
+          docker rm ${{ env.CONTAINER_NAME }} || true
+          docker run --detach --network=web --restart always \
+            --env-file container.env \
             --name ${{ env.CONTAINER_NAME }} \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest

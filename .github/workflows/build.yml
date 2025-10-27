@@ -61,17 +61,17 @@ jobs:
       
       - name: Create env file for migration
         run: |
-          cat > migration.env << EOF
-          DB_DSN=${{ secrets.DB_DSN }}
-          BOT_TOKEN=${{ secrets.BOT_TOKEN }}
-          BASE_URL=${{ vars.BASE_URL }}
-          WEBHOOK_PATH=${{ vars.WEBHOOK_PATH }}
-          QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
-          PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}
-          SERVICE_ACCOUNT_ID=${{ secrets.SERVICE_ACCOUNT_ID }}
-          KEY_ID=${{ secrets.KEY_ID }}
-          HOST=${{ vars.HOST }}
-          PORT=${{ vars.PORT }}
+          cat > migration.env << 'EOF'
+          DB_DSN='${{ secrets.DB_DSN }}'
+          BOT_TOKEN='${{ secrets.BOT_TOKEN }}'
+          BASE_URL='${{ vars.BASE_URL }}'
+          WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}'
+          QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}'
+          PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}'
+          SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}'
+          KEY_ID='${{ secrets.KEY_ID }}'
+          HOST='${{ vars.HOST }}'
+          PORT='${{ vars.PORT }}'
           EOF
       
       - name: Migrate DB
@@ -83,17 +83,17 @@ jobs:
             
       - name: Create env file for container
         run: |
-          cat > container.env << EOF
-          DB_DSN=${{ secrets.DB_DSN }}
-          BOT_TOKEN=${{ secrets.BOT_TOKEN }}
-          BASE_URL=${{ vars.BASE_URL }}
-          WEBHOOK_PATH=${{ vars.WEBHOOK_PATH }}
-          QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
-          PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}
-          SERVICE_ACCOUNT_ID=${{ secrets.SERVICE_ACCOUNT_ID }}
-          KEY_ID=${{ secrets.KEY_ID }}
-          HOST=${{ vars.HOST }}
-          PORT=${{ vars.PORT }}
+          cat > container.env << 'EOF'
+          DB_DSN='${{ secrets.DB_DSN }}'
+          BOT_TOKEN='${{ secrets.BOT_TOKEN }}'
+          BASE_URL='${{ vars.BASE_URL }}'
+          WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}'
+          QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}'
+          PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}'
+          SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}'
+          KEY_ID='${{ secrets.KEY_ID }}'
+          HOST='${{ vars.HOST }}'
+          PORT='${{ vars.PORT }}'
           EOF
       
       - name: Run new version
@@ -122,17 +122,17 @@ jobs:
       
       - name: Create env file for migration
         run: |
-          cat > migration.env << EOF
-          DB_DSN=${{ secrets.DB_DSN }}
-          BOT_TOKEN=${{ secrets.BOT_TOKEN }}
-          BASE_URL=${{ vars.BASE_URL }}
-          WEBHOOK_PATH=${{ vars.WEBHOOK_PATH }}
-          QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
-          PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}
-          SERVICE_ACCOUNT_ID=${{ secrets.SERVICE_ACCOUNT_ID }}
-          KEY_ID=${{ secrets.KEY_ID }}
-          HOST=${{ vars.HOST }}
-          PORT=${{ vars.PORT }}
+          cat > migration.env << 'EOF'
+          DB_DSN='${{ secrets.DB_DSN }}'
+          BOT_TOKEN='${{ secrets.BOT_TOKEN }}'
+          BASE_URL='${{ vars.BASE_URL }}'
+          WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}'
+          QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}'
+          PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}'
+          SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}'
+          KEY_ID='${{ secrets.KEY_ID }}'
+          HOST='${{ vars.HOST }}'
+          PORT='${{ vars.PORT }}'
           EOF
       
       - name: Migrate DB
@@ -144,17 +144,17 @@ jobs:
             
       - name: Create env file for container
         run: |
-          cat > container.env << EOF
-          DB_DSN=${{ secrets.DB_DSN }}
-          BOT_TOKEN=${{ secrets.BOT_TOKEN }}
-          BASE_URL=${{ vars.BASE_URL }}
-          WEBHOOK_PATH=${{ vars.WEBHOOK_PATH }}
-          QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
-          PRIVATE_KEY=${{ secrets.PRIVATE_KEY }}
-          SERVICE_ACCOUNT_ID=${{ secrets.SERVICE_ACCOUNT_ID }}
-          KEY_ID=${{ secrets.KEY_ID }}
-          HOST=${{ vars.HOST }}
-          PORT=${{ vars.PORT }}
+          cat > container.env << 'EOF'
+          DB_DSN='${{ secrets.DB_DSN }}'
+          BOT_TOKEN='${{ secrets.BOT_TOKEN }}'
+          BASE_URL='${{ vars.BASE_URL }}'
+          WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}'
+          QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}'
+          PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}'
+          SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}'
+          KEY_ID='${{ secrets.KEY_ID }}'
+          HOST='${{ vars.HOST }}'
+          PORT='${{ vars.PORT }}'
           EOF
       
       - name: Run new version

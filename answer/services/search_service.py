@@ -117,7 +117,7 @@ class SearchService:
         return get_context(
             query=query,
             key_words_dict=self._app_state["keywords_dict"],
-            ensemble_retriever=self._app_state["bm25_retriever"],
+            ensemble_retriever=self._app_state["ensemble_retriever"],
             vector_store=self._app_state["vector_store"],
             ensemble_k=settings.ensemble_k,
             verbose=True,

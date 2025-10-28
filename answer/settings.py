@@ -27,9 +27,9 @@ class Settings(BaseSettings):
         
     QDRANT_API_KEY: str
         
-    SERVICE_ACCOUNT_ID: 'null'
-    PRIVATE_KEY: 'null'
-    KEY_ID: 'null'
+    SERVICE_ACCOUNT_ID: str = 'null'
+    PRIVATE_KEY: str = 'null'
+    KEY_ID: str = 'null'
     LLM_MAX_OUTPUT: int = 500
         
     HOST: str = "127.0.0.1"

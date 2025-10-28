@@ -5,21 +5,40 @@ import requests as r
 from time import time, sleep
 from cachetools import cached, TTLCache
 from pathlib import Path
+import os
 
 PROMPT_PATH = Path(__file__).parent / "prompt.txt"
 
+def load_key_data():
+    key_path = Path("/app/key.json")
+    if key_path.exists():
+        with open(key_path, "r") as f:
+            return json.load(f)
+    
+    service_account_id = os.getenv("SERVICE_ACCOUNT_ID")
+    private_key = os.getenv("PRIVATE_KEY")
+    key_id = os.getenv("KEY_ID")
+    
+    if service_account_id and private_key and key_id:
+        return {
+            "service_account_id": service_account_id,
+            "private_key": private_key,
+            "id": key_id
+        }
+    
 @cached(cache=TTLCache(maxsize=1024, ttl=3600))
-def get_ya_token(private_key: str, service_id: str, key_id: str):
+def get_ya_token():
+    key_data = load_key_data()
     now = int(time())
     payload = {
         "aud": "https://iam.api.cloud.yandex.net/iam/v1/tokens",
-        "iss": service_id,
+        "iss": key_data["service_account_id"],
         "iat": now,
         "exp": now + 360,
     }
     
     encoded_token = jwt.encode(
-        payload, private_key, algorithm="PS256", headers={"kid": key_id}
+        payload, key_data["private_key"], algorithm="PS256", headers={"kid": key_data["id"]}
     )
     
     iam_token = r.post(
@@ -43,8 +62,7 @@ def format_messages(context, question):
     ]
 
 def get_answer(context, question, settings):
-
-    client = {"token": get_ya_token(settings.PRIVATE_KEY, settings.SERVICE_ACCOUNT_ID, settings.KEY_ID), "folder_id": "b1ggivrnbg1ftsr8no1s"}
+    client = {"token": get_ya_token(), "folder_id": "b1ggivrnbg1ftsr8no1s"}
     
     values = {
         "modelUri": "gpt://b1ggivrnbg1ftsr8no1s/yandexgpt-lite/latest",

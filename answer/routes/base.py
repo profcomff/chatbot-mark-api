@@ -165,7 +165,7 @@ async def init_resources():
         "embedder": app.state.embedder,
         "qdrant_client": app.state.qdrant_client,
         "vector_store": app.state.vector_store,
-        "bm25_retriever": app.state.bm25_retriever,
+        "ensemble_retriever": app.state.ensemble_retriever,
         "keywords_dict": app.state.keywords_dict,
     }
     search_service.set_app_state(app_state_dict)

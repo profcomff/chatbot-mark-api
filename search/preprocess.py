@@ -16,6 +16,20 @@ _LEMMATIZED_BANNED_WORDS = {lemma.strip() for w in _BANNED_WORDS for lemma in _M
 
 
 def preprocess_stem(text, filter_stopwords=True, filter_stemmed_banned_words=True):
+    """
+    Предобрабатывает текст с использованием стемминга (приведения слов к их основе).
+    
+    Выполняет очистку текста, токенизацию, удаление стоп-слов (опционально) и стемминг,
+    с возможностью фильтрации запрещенных слов после стемминга.
+    
+    Args:
+        text (str): Исходный текст для предобработки
+        filter_stopwords (bool): Флаг фильтрации стоп-слов (по умолчанию True)
+        filter_stemmed_banned_words (bool): Флаг фильтрации запрещенных слов после стемминга (по умолчанию True)
+    
+    Returns:
+        List[str]: Список обработанных слов в их стеммированной форме
+    """
     cleaned = _PREPROCESS_REGEX.sub('', text.lower())
     words = word_tokenize(cleaned, language="russian")
     if filter_stopwords:
@@ -27,6 +41,20 @@ def preprocess_stem(text, filter_stopwords=True, filter_stemmed_banned_words=Tru
 
 
 def preprocess_lemma(text, filter_stopwords=False, filter_lemmatized_banned_words=False):
+    """
+    Предобрабатывает текст с использованием лемматизации (приведения слов к нормальной форме).
+    
+    Выполняет очистку текста, токенизацию, удаление стоп-слов (опционально) и лемматизацию,
+    с возможностью фильтрации запрещенных слов после лемматизации.
+    
+    Args:
+        text (str): Исходный текст для предобработки
+        filter_stopwords (bool): Флаг фильтрации стоп-слов (по умолчанию False)
+        filter_lemmatized_banned_words (bool): Флаг фильтрации запрещенных слов после лемматизации (по умолчанию False)
+    
+    Returns:
+        List[str]: Список обработанных слов в их лемматизированной форме
+    """
     cleaned = _PREPROCESS_REGEX.sub('', text.lower())
     words = word_tokenize(cleaned, language="russian")
     if filter_stopwords:

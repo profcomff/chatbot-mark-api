@@ -62,6 +62,9 @@ def format_messages(context, question):
     ]
 
 def get_answer(context, question, settings):
+    """
+    Получение ответа из LLM
+    """
     client = {"token": get_ya_token(), "folder_id": "b1ggivrnbg1ftsr8no1s"}
     
     values = {

@@ -5,6 +5,9 @@ from transformers import XLMRobertaModel, XLMRobertaTokenizer
 
 
 class E5LangChainEmbedder(Embeddings):
+    """
+    Кастомная модель для получения эмбедингов в пайплайне LangChain.
+    """
     def __init__(self, tokenizer, model, device='cpu', embed_batch_size=8, add_prefix=False, disable_tqdm=False):
         self.tokenizer = tokenizer
         self.model = model.to(device)

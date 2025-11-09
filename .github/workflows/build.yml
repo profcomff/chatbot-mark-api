@@ -73,6 +73,9 @@ jobs:
             --env BASE_URL='${{ vars.BASE_URL }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
+            --env SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}' \
+            --env KEY_ID='${{ secrets.KEY_ID }}' \
+            --env PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}' \
             --env HOST='${{ vars.HOST }}' \
             --env PORT='${{ vars.PORT }}' \
             -v $(pwd)/key.json:/app/key.json:ro \
@@ -90,6 +93,9 @@ jobs:
             --env BASE_URL='${{ vars.BASE_URL }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
+            --env SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}' \
+            --env KEY_ID='${{ secrets.KEY_ID }}' \
+            --env PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}' \
             --env HOST='${{ vars.HOST }}' \
             --env PORT='${{ vars.PORT }}' \
             -v $(pwd)/key.json:/app/key.json:ro \
@@ -125,6 +131,9 @@ jobs:
             --env BASE_URL='${{ vars.BASE_URL }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
+            --env SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}' \
+            --env KEY_ID='${{ secrets.KEY_ID }}' \
+            --env PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}' \
             --env HOST='${{ vars.HOST }}' \
             --env PORT='${{ vars.PORT }}' \
             -v $(pwd)/key.json:/app/key.json:ro \
@@ -142,6 +151,9 @@ jobs:
             --env BASE_URL='${{ vars.BASE_URL }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
+            --env SERVICE_ACCOUNT_ID='${{ secrets.SERVICE_ACCOUNT_ID }}' \
+            --env KEY_ID='${{ secrets.KEY_ID }}' \
+            --env PRIVATE_KEY='${{ secrets.PRIVATE_KEY }}' \
             --env HOST='${{ vars.HOST }}' \
             --env PORT='${{ vars.PORT }}' \
             -v $(pwd)/key.json:/app/key.json:ro \

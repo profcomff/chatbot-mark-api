@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     MAX_BUTTONS: int = 5
     max_length: int = 200
     collection_name: str = 'bookstack_v0'
-    warning_message: str = ' Ответ сгенерирован ИИ и может содержать неточности.'
+    warning_message: str = '\n' + '\033[3m' + ' Ответ сгенерирован ИИ и может содержать неточности.' + '\033[0m'
 
 
 @lru_cache

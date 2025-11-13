@@ -15,11 +15,10 @@ from parse_bookstack import test_connection, html_to_plain_text
 from parse_bookstack import get_all_chapters, get_all_pages, get_page_content
 
 BOOKSTACK_URL = "https://bookstack.profcomff.com" 
-TOKEN_ID = "cpLcxwHfJdVmZp0V7qYmXbH2AEsEwAKS"
-TOKEN_SECRET = "YMLSWtuqqW2VLlW5JLSeHfHQ6hUe8DAO"
+TOKEN_ID = ""
+TOKEN_SECRET = ""
 
 BOOK_ID = 1 # ID книги для экспорта (из вашего импортера)
-OUTPUT_CSV = "exported_data.csv"
 TIMEOUT = 30
 
 headers = {

@@ -18,6 +18,19 @@
     
     python create_qdrant_db.py 
     ```
+
+## Парсинг документов из bookstack в новую коллекцию в qdrant
+
+```bash
+export BOOKSTACK_TOKEN_ID = "BOOKSTACK_TOKEN_ID"
+export BOOKSTACK_TOKEN_SECRET = "BOOKSTACK_TOKEN_SECRET"
+
+export COLLECTION_NAME="name_for_new_qdrant_collection"
+```
+Запуск скрипта
+```bash
+python scripts/bookstack2qdrant.py
+```
 ## Запуск API
 
 1. Перейдите в папку проекта
@@ -43,7 +56,7 @@
     export QDRANT_API_KEY="qdrant_api_key"
 
     # Токен ТГ Бота
-    EXPORT BOT_TOKEN="FROM YAGPT"
+    export BOT_TOKEN="BOT_TOKEN"
 
     # Токен YandexGPT
     export SERVICE_ACCOUNT_ID="FROM YAGPT"
@@ -51,7 +64,6 @@
     export KEY_ID="FROM YAGPT"
     
     export PRIVATE_KEY="FROM YAGPT"
-    
     ```
 
 5. Запустите приложение

@@ -1,3 +1,4 @@
+aiogram
 aiohappyeyeballs==2.6.1
 aiohttp==3.12.14
 aiosignal==1.4.0
@@ -13,6 +14,7 @@ certifi==2025.7.14
 charset-normalizer==3.4.2
 click==8.2.1
 coloredlogs==15.0.1
+cryptography>=41.0.0
 dataclasses-json==0.6.7
 dill==0.4.0
 distro==1.9.0
@@ -62,7 +64,7 @@ multidict==6.6.3
 mypy_extensions==1.1.0
 networkx==3.5
 nltk==3.9.1
-numpy==2.3.2
+numpy
 oauthlib==3.3.1
 onnxruntime==1.22.1
 opentelemetry-api==1.35.0
@@ -110,7 +112,7 @@ starlette==0.47.2
 sympy==1.14.0
 tenacity==9.1.2
 tokenizers==0.21.2
-torch==2.2.2
+torch
 tqdm==4.67.1
 transformers==4.54.0
 typer==0.16.0
@@ -126,3 +128,4 @@ websockets==15.0.1
 yarl==1.20.1
 zipp==3.23.0
 zstandard==0.23.0
+PyJWT==2.10.1

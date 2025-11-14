@@ -1,34 +1,59 @@
+import datetime
+import logging
 import sys
+
+
 sys.path.append("../")
 
+from aiogram import Bot, Dispatcher
+from aiogram.types import Update
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.responses import HTMLResponse
 from fastapi_sqlalchemy import DBSessionMiddleware
-from answer import __version__
-from answer.settings import get_settings
-
+from langchain.retrievers import EnsembleRetriever
+from langchain_community.retrievers import BM25Retriever
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
+from sqlalchemy import and_, desc
+from sqlalchemy.engine import create_engine
+from sqlalchemy.orm import Session as DbSession
+from sqlalchemy.orm import sessionmaker
 
-from langchain_community.retrievers import BM25Retriever
+from answer import __version__
+from answer.bot.tg_bot.initialisation import bot_shutdown, bot_startup
+from answer.models.db import Conversation, User
+from answer.schemas.api_models import (
+    ConversationContextResponse,
+    CreateUserRequest,
+    SaveConversationRequest,
+    UserInput,
+    UserResponse,
+)
+from answer.schemas.db_models import StatusMessage
+from answer.services import get_search_service
+from answer.settings import get_settings
 from llm.llm import get_answer
-
-from langchain.retrievers import EnsembleRetriever
-from search.nn import FilteredEnsembleRetriever
-
-from search.search import get_context, generate_keywords_dict, get_documents_from_qdrant
-from search.nn import init_embedder
-from search.preprocess import preprocess_stem
 from search.filter import length_filter
+from search.nn import FilteredEnsembleRetriever, init_embedder
+from search.preprocess import preprocess_stem
+from search.search import generate_keywords_dict, get_context, get_documents_from_qdrant
+
 
 settings = get_settings()
+search_service = get_search_service()
+logger = logging.getLogger(__name__)
+
+bot = None
+dp = None
+
+engine = create_engine(str(settings.DB_DSN), pool_pre_ping=True, pool_recycle=300)
+Session = sessionmaker(bind=engine)
+
 app = FastAPI(
     title='Ассистент',
     description='-',
     version=__version__,
-
     root_path=settings.ROOT_PATH if __version__ != 'dev' else '',
     docs_url=None if __version__ != 'dev' else '/docs',
     redoc_url=None,
@@ -49,18 +74,55 @@ app.add_middleware(
 )
 
 
-class UserInput(BaseModel):
-    text: str
-    generate_ai_response: bool = False  
+@app.post(settings.WEBHOOK_PATH)
+async def webhook_handler(request: Request):
+    """Обработчик webhook обновления от тг"""
+    global bot, dp
 
-        
+    if not bot or not dp:
+        logger.error("Bot or dispatcher not initialized")
+        return {"status": "error", "message": "Bot not ready"}
+
+    try:
+        try:
+            update_data = await request.json()
+        except Exception as e:
+            logger.error(f"Invalid JSON in webhook: {e}")
+            return {"status": "error", "message": "Invalid JSON"}
+
+        if not update_data:
+            logger.error("Empty webhook data received")
+            return {"status": "error", "message": "Empty data"}
+
+        logger.info(f"Received webhook data with keys: {list(update_data.keys())}")
+
+        try:
+            update = Update(**update_data)
+        except Exception as e:
+            logger.error(f"Invalid Update object: {e}")
+            return {"status": "error", "message": "Invalid update format"}
+
+        logger.info(f"Created update object: {update}")
+
+        await dp.feed_update(bot=bot, update=update)
+        logger.info("Update processed successfully")
+
+        return {"status": "ok"}
+
+    except Exception as e:
+        logger.error(f"Error processing webhook: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
+
 @app.on_event("startup")
-def init_resources():    
-    with open(settings.GIGA_KEY_PATH, "r") as f:
-        app.state.credentials = f.read().strip()
-    
+async def init_resources():
+    global bot, dp
+
+    bot, dp = await bot_startup()
+    app.state.bot = bot
+
     app.state.embedder = init_embedder()
-    
+
     app.state.qdrant_client = QdrantClient(
         url="http://qdrant.profcomff.com:6333",
         api_key=settings.QDRANT_API_KEY
@@ -73,11 +135,8 @@ def init_resources():
         metadata_field="metadata"
     )
 
-    
     app.state.bm25_retriever = BM25Retriever.from_documents(
-        documents, 
-        preprocess_func=preprocess_stem,
-        k=settings.retrivier_k
+        documents, preprocess_func=preprocess_stem, k=settings.retrivier_k
     )
 
     app.state.vector_store = QdrantVectorStore(
@@ -85,7 +144,7 @@ def init_resources():
         collection_name=settings.collection_name,
         embedding=app.state.embedder,
     )
-    
+
     app.state.vector_retriever = app.state.vector_store.as_retriever(search_kwargs={"k": settings.retrivier_k})
     
     app.state.ensemble_retriever = EnsembleRetriever(retrievers=[app.state.bm25_retriever, app.state.vector_retriever], 
@@ -100,7 +159,26 @@ def init_resources():
         vector_store=app.state.vector_store, 
         output_json_path="file/key_words_dict.json"
     )
-        
+
+
+    app_state_dict = {
+        "embedder": app.state.embedder,
+        "qdrant_client": app.state.qdrant_client,
+        "vector_store": app.state.vector_store,
+        "ensemble_retriever": app.state.ensemble_retriever,
+        "keywords_dict": app.state.keywords_dict,
+    }
+    search_service.set_app_state(app_state_dict)
+
+
+@app.on_event("shutdown")
+async def shutdown_resources():
+    global bot, dp
+    await bot_shutdown()
+    bot = None
+    dp = None
+
+
 @app.post("/greet")
 async def generate_response(user_input: UserInput):
     if not user_input.text:
@@ -108,7 +186,6 @@ async def generate_response(user_input: UserInput):
     
     if user_input.generate_ai_response:
         ensemble_retriever = app.state.ensemble_retriever
-    
     else:
         ensemble_retriever = app.state.filtered_ensemble_retriever
         
@@ -117,29 +194,164 @@ async def generate_response(user_input: UserInput):
         key_words_dict=app.state.keywords_dict,
         ensemble_retriever=ensemble_retriever,
         vector_store=app.state.vector_store,
-        ensemble_k = settings.ensemble_k,
+        ensemble_k=settings.ensemble_k,
         verbose=True,
     )
+    
+    formatted_results = [
+        {
+            "topic": getattr(r, 'topic', ''),
+            "full_text": getattr(r, 'full_text', str(r)),
+            "metadata": getattr(r, 'metadata', {})
+        } 
+        for r in results
+    ]
     
     if user_input.generate_ai_response:
         if length_filter(text=user_input.text, max_len=settings.max_length):
             ai_answer = get_answer(
                 context=combined_text, 
                 question=user_input.text, 
-                credentials=app.state.credentials,
                 settings=settings,
             )
-        
-            return {"results": results, "ai_answer": ai_answer}
-        
+            
+            response = {"results": formatted_results}
+            if ai_answer:
+                response["ai_answer"] = ai_answer
+                
+            return response
         else: 
-            return {"results": [], "ai_answer": 'Ваш запрос слишком длинный :( Сделайте короче или используйте режим безGPT.'}
-        
-    if len(results) > 0:
-        return {"results": results}
+            return {
+                "results": [], 
+                "ai_answer": 'Ваш запрос слишком длинный :( Сделайте короче или используйте режим без GPT.'
+            }
+    
+    if len(formatted_results) > 0:
+        return {"results": formatted_results}
     else:             
-        return {"results": [], "ai_answer": 'Извините, я не понял Ваш запрос. Попробуйте использовать GPT версию.'}
+        return {
+            "results": [], 
+            "ai_answer": 'Извините, я не понял Ваш запрос. Попробуйте использовать GPT версию.'
+        }       
+    
 
+@app.post("/users", response_model=UserResponse)
+async def create_user(user_request: CreateUserRequest):
+    """Создание нового пользователя"""
+    try:
+        with Session() as session:
+            existing_user = session.query(User).filter(User.chat_id == user_request.chat_id).first()
+            if existing_user:
+                return UserResponse(
+                    id=existing_user.id,
+                    chat_id=existing_user.chat_id,
+                    create_ts=existing_user.create_ts,
+                    is_deleted=existing_user.is_deleted,
+                )
+
+            new_user = User(
+                chat_id=user_request.chat_id, create_ts=datetime.datetime.now(datetime.timezone.utc), is_deleted=False
+            )
+            session.add(new_user)
+            session.commit()
+            session.refresh(new_user)
+
+            logger.info(f"Создан новый пользователь с chat_id: {user_request.chat_id}")
+
+            return UserResponse(
+                id=new_user.id, chat_id=new_user.chat_id, create_ts=new_user.create_ts, is_deleted=new_user.is_deleted
+            )
+
+    except Exception as e:
+        logger.error(f"Ошибка создания пользователя: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка создания пользователя")
+
+
+@app.get("/users/{chat_id}", response_model=UserResponse)
+async def get_user(chat_id: str):
+    """Получение пользователя по chat_id"""
+    try:
+        with Session() as session:
+            user = session.query(User).filter(User.chat_id == chat_id).one_or_none()
+            if user is None:
+                raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+            return UserResponse(id=user.id, chat_id=user.chat_id, create_ts=user.create_ts, is_deleted=user.is_deleted)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка получения пользователя: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка получения пользователя")
+
+
+@app.get("/users/{chat_id}/context", response_model=ConversationContextResponse)
+async def get_conversation_context(chat_id: str):
+    """Получение контекста диалогов пользователя"""
+    try:
+        with Session() as session:
+            user = session.query(User).filter(User.chat_id == chat_id).one_or_none()
+            if user is None:
+                raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+            conversations = (
+                session.query(Conversation)
+                .filter(and_(Conversation.user_id == user.id, Conversation.is_deleted == False))
+                .order_by(desc(Conversation.create_ts))
+                .limit(settings.CONTEXT_DEPTH)
+                .all()
+            )
+
+            if not conversations:
+                return ConversationContextResponse(context="", conversations_count=0)
+
+            conversations = list(reversed(conversations))
+            context_parts = []
+            for conv in conversations:
+                context_parts.append(f"Пользователь: {conv.request}")
+                context_parts.append(f"Ассистент: {conv.response}")
+
+            context_string = "\n".join(context_parts)
+
+            return ConversationContextResponse(context=context_string, conversations_count=len(conversations))
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка получения контекста диалогов: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка получения контекста диалогов")
+
+
+@app.post("/conversations")
+async def save_conversation(conversation_request: SaveConversationRequest):
+    """Сохранение диалога"""
+    try:
+        with Session() as session:
+            user = session.query(User).filter(User.chat_id == conversation_request.user_chat_id).one_or_none()
+            if user is None:
+                raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+            conversation = Conversation(
+                user_id=user.id,
+                request=conversation_request.request,
+                response=conversation_request.response,
+                is_response_with_buttons=conversation_request.is_response_with_buttons,
+                create_ts=datetime.datetime.now(datetime.timezone.utc),
+                is_deleted=False,
+            )
+
+            session.add(conversation)
+            session.commit()
+
+            logger.info(f"Диалог сохранен для пользователя {conversation_request.user_chat_id}")
+
+            return {"status": "success", "message": "Диалог успешно сохранен"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка сохранения диалога: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка сохранения диалога")
 
 
 @app.get("/", response_class=HTMLResponse)

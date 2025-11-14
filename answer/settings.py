@@ -24,10 +24,14 @@ class Settings(BaseSettings):
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: list[str] = ["*"]
     CORS_ALLOW_HEADERS: list[str] = ["*"]
+        
     QDRANT_API_KEY: str
-    GIGA_KEY_PATH: str
-    GIGA_MAX_TOKENS: int = 500
-    PROFANITY_CHECK: bool = True
+        
+    SERVICE_ACCOUNT_ID: str = 'null'
+    PRIVATE_KEY: str = 'null'
+    KEY_ID: str = 'null'
+    LLM_MAX_OUTPUT: int = 500
+        
     HOST: str = "127.0.0.1"
     PORT: int = 8080
 

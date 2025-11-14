@@ -1,41 +1,46 @@
 import json
 import math
+
 from langchain_core.documents import Document
+
 from .preprocess import preprocess_lemma
 
 
 def get_documents_from_qdrant(client, collection_name, page_content_field="page_content", metadata_field="metadata"):
+    """
+    Извлекает все документы из указанной коллекции Qdrant.
+    
+    Args:
+        client: Клиент Qdrant для подключения к базе данных
+        collection_name (str): Название коллекции для извлечения документов
+        page_content_field (str): Название поля с текстовым содержимым документа
+        metadata_field (str): Название поля с метаданными документа
+    
+    Returns:
+        List[Document]: Список объектов Document с содержимым и метаданными
+    """    
     documents = []
-    points, next_page = client.scroll(
-        collection_name=collection_name,
-        with_payload=True
-    )
+    points, next_page = client.scroll(collection_name=collection_name, with_payload=True)
 
     while points:
         for point in points:
             doc_text = point.payload.get(page_content_field, "")
             metadata = point.payload.get(metadata_field, {})
             documents.append(Document(page_content=doc_text, metadata=metadata))
-        
+
         if next_page is None:
             break
 
-        points, next_page = client.scroll(
-            collection_name=collection_name,
-            with_payload=True,
-            offset=next_page
-        )
-    
+        points, next_page = client.scroll(collection_name=collection_name, with_payload=True, offset=next_page)
+
     return documents
 
 
 def generate_keywords_dict(vector_store, output_json_path=None):
+    "Временно не рабочий модуль"
     keywords_dict = {}
 
-    points, next_page = vector_store.client.scroll(
-        collection_name=vector_store.collection_name,
-        with_payload=True
-    )
+    points, next_page = vector_store.client.scroll(collection_name=vector_store.collection_name, with_payload=True)
 
     while points:
         for point in points:
@@ -46,8 +51,8 @@ def generate_keywords_dict(vector_store, output_json_path=None):
             key_words_val = metadata.get("key_words")
             if not key_words_val:
                 continue
-            
-            if isinstance(key_words_val, float) and math.isnan(key_words_val): 
+
+            if isinstance(key_words_val, float) and math.isnan(key_words_val):
                 continue
 
             for kw in key_words_val.split(","):
@@ -55,11 +60,7 @@ def generate_keywords_dict(vector_store, output_json_path=None):
                 if not kw:
                     continue
 
-                lemmas = preprocess_lemma(
-                    kw,
-                    filter_stopwords=True,
-                    filter_lemmatized_banned_words=True
-                )
+                lemmas = preprocess_lemma(kw, filter_stopwords=True, filter_lemmatized_banned_words=True)
                 if not lemmas:
                     continue
 
@@ -70,9 +71,7 @@ def generate_keywords_dict(vector_store, output_json_path=None):
             break
 
         points, next_page = vector_store.client.scroll(
-            collection_name=vector_store.collection_name,
-            with_payload=True,
-            offset=next_page
+            collection_name=vector_store.collection_name, with_payload=True, offset=next_page
         )
 
     if output_json_path:
@@ -83,6 +82,7 @@ def generate_keywords_dict(vector_store, output_json_path=None):
 
 
 def key_words_search(words, key_words_dict, vector_store, verbose=False):
+    "Временно не рабочий модуль"
     query_text = " ".join(words).lower()
     matching_ids = set()
 
@@ -111,17 +111,48 @@ def key_words_search(words, key_words_dict, vector_store, verbose=False):
 
 
 def semantic_search(query, ensemble_retriever, ensemble_k, verbose=False):
+    """
+    Выполняет семантический поиск с использованием ансамбля методов.
+    
+    Комбинирует векторный поиск и BM25 для получения наиболее релевантных документов.
+    
+    Args:
+        query (str): Поисковый запрос пользователя
+        ensemble_retriever: Ансамблевый ретривер для гибридного поиска
+        ensemble_k (int): Количество возвращаемых документов
+        verbose (bool): Флаг вывода отладочной информации
+    
+    Returns:
+        Tuple[List[Dict], str]: Кортеж с результатами поиска и объединенным текстом
+    """
     if verbose:
         print("Semantic search: Using hybrid retrieval (BM25 + vector search)")
-    
+
     rankings = ensemble_retriever.invoke(query)[:ensemble_k]
-    
+
     results = [{"topic": r.metadata['source'], "full_text": r.page_content} for r in rankings]
     combined_text = "\n".join(r.page_content for r in rankings)
     return results, combined_text
 
 
 def get_context(query, key_words_dict, ensemble_retriever, vector_store, ensemble_k, verbose=True):
+    """
+    Основная функция для получения релевантного контекста по запросу пользователя.
+    
+    Автоматически выбирает стратегию поиска (по ключевым словам или семантический)
+    в зависимости от характеристик запроса. На данный момент работает только семантический.
+    
+    Args:
+        query (str): Запрос пользователя
+        key_words_dict (Dict[str, List[str]]): Словарь ключевых слов для поиска
+        ensemble_retriever: Ансамблевый ретривер для семантического поиска
+        vector_store: Векторное хранилище документов
+        ensemble_k (int): Количество возвращаемых документов
+        verbose (bool): Флаг вывода отладочной информации
+    
+    Returns:
+        Tuple[List[Dict], str]: Кортеж с результатами поиска и объединенным текстом
+    """
     words = preprocess_lemma(query, filter_stopwords=False, filter_lemmatized_banned_words=False)
     query_key = " ".join(words)
     if len(words) < 3 and any(kw in query_key for kw in key_words_dict):

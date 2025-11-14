@@ -65,6 +65,32 @@ def html_to_plain_text(html_content):
     return text.strip()
 
 
+def get_book_info(book_id):
+    """Получить информацию о книге, включая slug"""
+    print(f"Получение информации о книге {book_id}...")
+    try:
+        response = requests.get(f"{BOOKSTACK_URL}/api/books/{book_id}", headers=headers, timeout=TIMEOUT)
+        response.raise_for_status()
+        book_data = response.json()
+        print(f"   Книга: {book_data['name']}, slug: {book_data['slug']}")
+        return book_data
+    except Exception as e:
+        print(f"Ошибка при получении информации о книге: {e}")
+        return None
+    
+
+def construct_page_url(book_slug, page_slug, page_details):
+    """Сконструировать правильный URL для страницы"""
+    # Если страница находится в главе
+    if page_details.get('chapter_id'):
+        chapter_slug = page_details.get('chapter_slug', '')
+        if chapter_slug:
+            return f"{BOOKSTACK_URL}/books/{book_slug}/chapter/{chapter_slug}#{page_slug}"
+    
+    # Обычная страница в книге
+    return f"{BOOKSTACK_URL}/books/{book_slug}/page/{page_slug}"
+
+
 def get_all_chapters(book_id):
     """Получить все главы книги"""
     print("Получение глав...")
@@ -196,7 +222,8 @@ def main():
         collection_name=collection_name,
         embedding=embedder,
     )
-    
+
+    book_data = get_book_info(BOOK_ID)
     chapters = get_all_chapters(BOOK_ID)
     pages = get_all_pages(BOOK_ID)
 
@@ -222,13 +249,20 @@ def main():
         answer = html_to_plain_text(page_details.get('html', ''))
 
         kw = None #TBA
+        page_slug = page_details.get('slug', '')
+        if page_slug:
+            page_url = construct_page_url(book_data['slug'], page_slug, page_details)
+        else:
+            # Fallback: используем старый метод если slug недоступен
+            page_url = f"{BOOKSTACK_URL}/books/{book_data['slug']}/page/{page['id']}"
 
         all_chunks.append(Document(
             page_content=answer,
             metadata={
                 "source": topic_name.strip(),
                 "key_words": kw,
-                'number_id': i
+                "number_id": i,
+                "url": page_url,
             }
         ))
             

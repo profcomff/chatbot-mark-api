@@ -3,3 +3,6 @@ key.json
 .DS_Store
 gigakey.txt
 *.crt
+file/key_words_dict.json
+
+scripts/ffbot_keys.sh

@@ -130,10 +130,22 @@ def semantic_search(query, ensemble_retriever, ensemble_k, verbose=False):
 
     rankings = ensemble_retriever.invoke(query)[:ensemble_k]
 
-    results = [{"topic": r.metadata['source'], "full_text": r.page_content} for r in rankings]
-    combined_text = "\n".join(r.page_content for r in rankings)
+    results = []
+    combined_text_parts = []
+    
+    for r in rankings:
+        full_text_with_url = f"{r.page_content}\n\nURL: {r.metadata.get('url', 'Не указан')}"
+        
+        results.append({
+            "topic": r.metadata['source'],
+            "full_text": full_text_with_url
+        })
+        
+        combined_text_parts.append(full_text_with_url)
+    
+    combined_text = "\n\n" + "="*50 + "\n\n".join(combined_text_parts)
+    
     return results, combined_text
-
 
 def get_context(query, key_words_dict, ensemble_retriever, vector_store, ensemble_k, verbose=True):
     """

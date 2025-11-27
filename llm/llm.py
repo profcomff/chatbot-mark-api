@@ -89,4 +89,4 @@ def get_answer(context, question, settings):
     response_data = resp.json()
     answer = response_data['result']['alternatives'][0]['message']['text']
     
-    return answer + '\n' + settings.warning_message
+    return answer + '\n' + '\n' + settings.warning_message

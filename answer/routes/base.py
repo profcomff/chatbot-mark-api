@@ -661,12 +661,26 @@ async def read_root():
                     else if (data.results) {{
                         // Если есть AI ответ - показываем его первым
                         if (data.ai_answer) {{
-                            const aiDiv = document.createElement('div');
-                            aiDiv.className = 'ai-answer';
-                            aiDiv.innerHTML = `
-                                <div style="color: #2E7D32; margin-bottom: 0.5rem;">🤖 Ответ AI:</div>
-                                <div>${{escapeHtml(data.ai_answer)}}</div>
-                            `;
+                            const aiDiv = document.createElement("div");
+                            aiDiv.className = "ai-answer";
+                            
+                            // Предполагаем, что warning_message в конце
+                            const fullText = data.ai_answer;
+                            const warningIndex = fullText.indexOf("Ответ сгенерирован ИИ");
+
+                            let answerText = fullText;
+                            let warningText = "";
+
+                            if (warningIndex !== -1) {{
+                                answerText = fullText.substring(0, warningIndex).trim();
+                                warningText = fullText.substring(warningIndex).trim();
+                            }}
+
+                            aiDiv.innerHTML = 
+                                "<div style=\\"color: #2E7D32; margin-bottom: 0.5rem;\\">🤖 Ответ AI:</div>" +
+                                "<div>" + escapeHtml(answerText).replace(/\\\\n/g, "<br>") + "</div>" +
+                                (warningText ? "<div style=\\"font-style: italic; margin-top: 1rem;\\">" + escapeHtml(warningText) + "</div>" : "");
+                            
                             responseDiv.appendChild(aiDiv);
                         }}
 

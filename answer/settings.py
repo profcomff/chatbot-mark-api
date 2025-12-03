@@ -11,13 +11,13 @@ class Settings(BaseSettings):
     model_config = ConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     DB_DSN: PostgresDsn = "postgresql://postgres@localhost:5432/postgres"
-    BOT_TOKEN: str = ""
-    BASE_URL: str = ""
+    BOT_TOKEN: str = "8422406863:AAG7UPDKdkp0Kxvi7QlV_Ck0WfWpuEYMUJ4"
+    BASE_URL: str = "https://postvocalically-framable-susanna.ngrok-free.dev"
     BASE_DESCRIPTION: str = (
         "\nЯ - бот помощник для студентов физического факультета МГУ.\nЗадай любой вопрос по стипендиям, учебным правам, социальным программам и иным особенностям обучения - я постараюсь тебе помочь."
     )
     CONTEXT_DEPTH: int = 3
-    WEBHOOK_PATH: str = ""
+    WEBHOOK_PATH: str = "/webhook"
     ROOT_PATH: str = "/" + os.getenv("APP_NAME", "")
 
     CORS_ALLOW_ORIGINS: list[str] = ["*"]
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     MAX_BUTTONS: int = 5
     max_length: int = 200
     collection_name: str = 'bookstack_02122025'
-    warning_message: str = ' Ответ сгенерирован ИИ и может содержать неточности.'
+    warning_message: str = '<i>Ответ сгенерирован ИИ и может содержать неточности.</i>'
 
 
 @lru_cache

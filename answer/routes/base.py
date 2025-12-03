@@ -217,7 +217,7 @@ async def generate_response(user_input: UserInput):
             
             response = {"results": formatted_results}
             if ai_answer:
-                response["ai_answer"] = ai_answer + "/n" + "<i> Ответ сгенерирован ИИ и может содержать неточности.'</i>"
+                response["ai_answer"] = ai_answer
                 
             return response
         else: 
@@ -660,23 +660,19 @@ async def read_root():
                     // Обработка результатов
                     else if (data.results) {{
                         // Если есть AI ответ - показываем его первым
-                        if (data.ai_answer) {{
-                            // Убираем HTML-теги из текста ответа
-                            const aiTextWithoutTags = data.ai_answer
-                                .replace(/<\/?i>/g, '')  // Убираем теги <i> и </i>
-                                .replace(/Ответ сгенерирован ИИ и может содержать неточности\.'$/, '') // Убираем disclaimer если он в конце
-                                .trim();
-                            
-                            const aiDiv = document.createElement('div');
-                            aiDiv.className = 'ai-answer';
-                            aiDiv.innerHTML = `
-                                <div style="color: #2E7D32; margin-bottom: 0.5rem;">🤖 Ответ AI:</div>
-                                <div>${{escapeHtml(aiTextWithoutTags)}}</div>
-                                <div style="margin-top: 1em; padding-top: 0.5em; border-top: 1px solid #c8e6c9; font-style: italic; color: #666; font-size: 0.9em;">
-                                    Ответ сгенерирован ИИ и может содержать неточности.
-                                </div>
-                            `;
-                            responseDiv.appendChild(aiDiv);
+                        else if (data.results) {{
+                            if (data.ai_answer) {{
+                                const aiDiv = document.createElement('div');
+                                aiDiv.className = 'ai-answer';
+                                aiDiv.innerHTML = `
+                                    <div style="color: #2E7D32; margin-bottom: 0.5rem;">🤖 Ответ AI:</div>
+                                    <div>${{escapeHtml(data.ai_answer)}}</div>
+                                    <div style="margin-top: 1em; padding-top: 0.5em; border-top: 1px solid #c8e6c9; font-style: italic; color: #666; font-size: 0.9em;">
+                                        Ответ сгенерирован ИИ и может содержать неточности.
+                                    </div>
+                                `;
+                                responseDiv.appendChild(aiDiv);
+                            }}
                         }}
 
                         // Показываем результаты поиска

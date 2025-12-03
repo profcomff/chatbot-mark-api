@@ -660,19 +660,17 @@ async def read_root():
                     // Обработка результатов
                     else if (data.results) {{
                         // Если есть AI ответ - показываем его первым
-                        else if (data.results) {{
-                            if (data.ai_answer) {{
-                                const aiDiv = document.createElement('div');
-                                aiDiv.className = 'ai-answer';
-                                aiDiv.innerHTML = `
-                                    <div style="color: #2E7D32; margin-bottom: 0.5rem;">🤖 Ответ AI:</div>
-                                    <div>${{escapeHtml(data.ai_answer)}}</div>
-                                    <div style="margin-top: 1em; padding-top: 0.5em; border-top: 1px solid #c8e6c9; font-style: italic; color: #666; font-size: 0.9em;">
-                                        Ответ сгенерирован ИИ и может содержать неточности.
-                                    </div>
-                                `;
-                                responseDiv.appendChild(aiDiv);
-                            }}
+                        if (data.ai_answer) {{
+                            const aiDiv = document.createElement('div');
+                            aiDiv.className = 'ai-answer';
+                            aiDiv.innerHTML = `
+                                <div style="color: #2E7D32; margin-bottom: 0.5rem;">🤖 Ответ AI:</div>
+                                <div>${{escapeHtml(data.ai_answer)}}</div>
+                                <div style="margin-top: 1em; padding-top: 0.5em; border-top: 1px solid #c8e6c9; font-style: italic; color: #666; font-size: 0.9em;">
+                                    Ответ сгенерирован ИИ и может содержать неточности.
+                                </div>
+                            `;
+                            responseDiv.appendChild(aiDiv);
                         }}
 
                         // Показываем результаты поиска

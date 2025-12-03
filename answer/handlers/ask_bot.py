@@ -115,7 +115,7 @@ async def handle_any_message(message: Message):
 
         await save_conversation_api(str(message.chat.id), validated_question, answer, is_response_with_buttons=False)
         await search_message.delete()
-        await message.answer(f"💡 <b>Ответ:</b>\n\n{answer}")
+        await message.answer(f"💡 <b>Ответ:</b>\n\n{answer}\n\n{settings.warning_message}")
 
         logger.info(f"Отправлен развернутый ответ пользователю {message.from_user.id}")
 

@@ -666,6 +666,9 @@ async def read_root():
                             aiDiv.innerHTML = `
                                 <div style="color: #2E7D32; margin-bottom: 0.5rem;">🤖 Ответ AI:</div>
                                 <div>${{escapeHtml(data.ai_answer)}}</div>
+                                <div style="margin-top: 1em; padding-top: 0.5em; border-top: 1px solid #c8e6c9; font-style: italic; color: #666; font-size: 0.9em;">
+                                    Ответ сгенерирован ИИ и может содержать неточности.
+                                </div>
                             `;
                             responseDiv.appendChild(aiDiv);
                         }}

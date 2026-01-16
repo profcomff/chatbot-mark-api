@@ -80,7 +80,7 @@ posthog==5.4.0
 propcache==0.3.2
 protobuf==6.31.1
 psycopg2-binary==2.9.10
-pyasn1==0.6.1
+pyasn1==0.6.2
 pyasn1_modules==0.4.2
 pybase64==1.4.1
 pydantic==2.11.7

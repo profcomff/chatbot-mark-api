@@ -125,7 +125,8 @@ async def init_resources():
 
     app.state.qdrant_client = QdrantClient(
         url="http://qdrant.profcomff.com:6333",
-        api_key=settings.QDRANT_API_KEY
+        api_key=settings.QDRANT_API_KEY,
+        prefer_grpc=False
     )
     
     documents = get_documents_from_qdrant(
@@ -140,9 +141,9 @@ async def init_resources():
     )
 
     app.state.vector_store = QdrantVectorStore(
-        client=app.state.qdrant_client,
-        collection_name=settings.collection_name,
-        embedding=app.state.embedder,
+    client=app.state.qdrant_client,  
+    collection_name=settings.collection_name,
+    embedding=app.state.embedder,
     )
 
     app.state.vector_retriever = app.state.vector_store.as_retriever(search_kwargs={"k": settings.retrivier_k})

@@ -31,7 +31,7 @@ export COLLECTION_NAME="name_for_new_qdrant_collection"
 ```bash
 python scripts/bookstack2qdrant.py
 ```
-## Запуск API
+## Запуск ui версии бота вместе с тг ботом.
 
 1. Перейдите в папку проекта
 

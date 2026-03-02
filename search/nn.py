@@ -2,7 +2,7 @@ import torch
 from langchain_core.embeddings import Embeddings
 from tqdm import tqdm
 from transformers import XLMRobertaModel, XLMRobertaTokenizer
-
+import onnxruntime as ort
 
 class E5LangChainEmbedder(Embeddings):
     """
@@ -54,15 +54,83 @@ class E5LangChainEmbedder(Embeddings):
             embeddings = torch.nn.functional.normalize(embeddings, p=2, dim=1)
             return embeddings.cpu().tolist()[0]
 
+        
+class OnnxE5LangChainEmbedder(Embeddings):
+    """ONNX-версия эмбедера для E5, совместимая с LangChain."""
+    def __init__(
+        self,
+        onnx_path: str,
+        tokenizer_name: str = "d0rj/e5-base-en-ru",
+        max_length: int = 512,
+        num_threads: int = 8,
+        add_prefix: bool = False,
+    ):
+        self.add_prefix = add_prefix
+        self.max_length = max_length
+        self.tokenizer = XLMRobertaTokenizer.from_pretrained(tokenizer_name)
+
+        options = ort.SessionOptions()
+        options.intra_op_num_threads = num_threads
+        options.inter_op_num_threads = 1
+
+        providers = ['CPUExecutionProvider']  
+        self.session = ort.InferenceSession(
+            onnx_path,
+            sess_options=options,
+            providers=providers
+        )
+        print(f"ONNX сессия создана с провайдерами: {self.session.get_providers()}")
+
+    def _encode(self, texts, prefix_type="query"):
+        if self.add_prefix:
+            if prefix_type == "query":
+                texts = ["query: " + t for t in texts]
+            else:
+                texts = ["passage: " + t for t in texts]
+
+        inputs = self.tokenizer(
+            texts,
+            max_length=self.max_length,
+            padding=True,
+            truncation=True,
+            return_tensors="np"
+        )
+
+        outputs = self.session.run(
+            ["embeddings"],
+            {
+                "input_ids": inputs["input_ids"],
+                "attention_mask": inputs["attention_mask"]
+            }
+        )
+        return outputs[0]
+
+    def embed_documents(self, texts):
+        embeddings = self._encode(texts, prefix_type="passage")
+        return embeddings.tolist()
+
+    def embed_query(self, text):
+        embedding = self._encode([text], prefix_type="query")
+        return embedding[0].tolist()  
+
 
 def init_embedder():
-    tokenizer = XLMRobertaTokenizer.from_pretrained("d0rj/e5-base-en-ru", use_cache=False)
-    model = XLMRobertaModel.from_pretrained("d0rj/e5-base-en-ru", use_cache=False)
-
-    return E5LangChainEmbedder(
-        tokenizer=tokenizer,
-        model=model,
+    """
+    Инициализирует эмбедер на ONNX Runtime.
+    Путь к ONNX-файлу задаётся относительно текущего файла.
+    """
+    onnx_path = "models/e5_embedder.onnx"
+    
+    print(f"Загрузка ONNX модели из {onnx_path}")
+    
+    embedder = OnnxE5LangChainEmbedder(
+        onnx_path=onnx_path,
+        tokenizer_name="d0rj/e5-base-en-ru",
+        max_length=512,
+        num_threads=8,
+        add_prefix=False
     )
+    return embedder
 
 
 class FilteredEnsembleRetriever:

@@ -35,8 +35,8 @@ class Settings(BaseSettings):
     HOST: str = "127.0.0.1"
     PORT: int = 8080
 
-    ensemble_k: int = 5
-    retrivier_k: int = 10
+    ensemble_k: int = 10
+    retrivier_k: int = 20
     MAX_BUTTONS: int = 5
     max_length: int = 200
     collection_name: str = 'bookstack_02122025'

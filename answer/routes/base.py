@@ -36,7 +36,7 @@ from answer.settings import get_settings
 from llm.llm import get_answer
 from search.filter import length_filter
 from search.nn import FilteredEnsembleRetriever, init_embedder
-from search.preprocess import preprocess_stem
+from search.preprocess import preprocess_stem, TextPreprocessor
 from search.search import generate_keywords_dict, get_context, get_documents_from_qdrant
 
 
@@ -160,6 +160,8 @@ async def init_resources():
         vector_store=app.state.vector_store, 
         output_json_path="file/key_words_dict.json"
     )
+    
+    app.state.text_preprocessor = TextPreprocessor.from_file()
 
 
     app_state_dict = {
@@ -189,9 +191,11 @@ async def generate_response(user_input: UserInput):
         ensemble_retriever = app.state.ensemble_retriever
     else:
         ensemble_retriever = app.state.filtered_ensemble_retriever
+    
+    processed_text = app.state.text_preprocessor.preprocess(user_input.text)
         
     results, combined_text = get_context(
-        query=user_input.text,
+        query=processed_text,
         key_words_dict=app.state.keywords_dict,
         ensemble_retriever=ensemble_retriever,
         vector_store=app.state.vector_store,

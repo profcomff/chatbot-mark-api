@@ -1,9 +1,12 @@
 import re
 
+import json
+from typing import Dict, Pattern
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
 from nltk.tokenize import word_tokenize
 from pymystem3 import Mystem
+from pathlib import Path
 
 
 _MYSTEM = Mystem()
@@ -13,6 +16,9 @@ _STOP_WORDS = set(stopwords.words('russian'))
 _BANNED_WORDS = {'мгу', 'физфак', 'физический', 'университет'}
 _STEMMED_BANNED_WORDS = {_STEMMER.stem(w) for w in _BANNED_WORDS}
 _LEMMATIZED_BANNED_WORDS = {lemma.strip() for w in _BANNED_WORDS for lemma in _MYSTEM.lemmatize(w)}
+
+_REGEX_PATH = Path(__file__).parent / "regex.json"
+
 
 
 def preprocess_stem(text, filter_stopwords=True, filter_stemmed_banned_words=True):
@@ -63,3 +69,30 @@ def preprocess_lemma(text, filter_stopwords=False, filter_lemmatized_banned_word
     if filter_lemmatized_banned_words:
         return [w for w in lemmas if w not in _LEMMATIZED_BANNED_WORDS]
     return lemmas
+
+
+class TextPreprocessor:
+    """Класс для предобработки текста запросов с использованием регулярных выражений."""
+    
+    def __init__(self, patterns, path=_REGEX_PATH):
+        """
+        :param patterns: словарь вида {регулярное_выражение: замена}
+        """
+        self.compiled_patterns = {}
+        for pattern, replacement in patterns.items():
+            self.compiled_patterns[re.compile(pattern, re.IGNORECASE | re.UNICODE)] = replacement
+           
+        self.path = path
+            
+    @classmethod
+    def from_file(cls, file_path=_REGEX_PATH):
+        """Загружает правила из JSON-файла и создает экземпляр препроцессора."""
+        with open(file_path, 'r', encoding='utf-8') as f:
+            patterns = json.load(f)
+        return cls(patterns, path=file_path)
+
+    def preprocess(self, text: str) -> str:
+        """Применяет все правила замены к тексту."""
+        for pattern, replacement in self.compiled_patterns.items():
+            text = pattern.sub(replacement, text)
+        return text

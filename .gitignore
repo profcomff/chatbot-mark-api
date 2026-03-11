@@ -3,3 +3,7 @@ key.json
 .DS_Store
 gigakey.txt
 *.crt
+venv/
+.env
+git
+.vscode

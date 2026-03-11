@@ -1,9 +1,9 @@
 import logging
 
-import httpx
 from aiogram import Router
 from aiogram.types import Message
 
+from answer.services.bot_service import get_bot_service
 from answer.settings import Settings, get_settings
 from answer.utils.validation import (
     get_safe_user_info,
@@ -11,64 +11,10 @@ from answer.utils.validation import (
     validate_question,
 )
 
-
 logger = logging.getLogger(__name__)
 router = Router()
 settings: Settings = get_settings()
-
-
-async def call_internal_api(text: str, chat_id: str = "", generate_ai_response: bool = False):
-    """Вызов внутреннего API через HTTP-запрос к эндпоинту /greet"""
-    try:
-        request_data = {"text": text, "generate_ai_response": generate_ai_response, "user_chat_id": chat_id}
-
-        base_url = f"http://{settings.HOST}:{settings.PORT}"
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{base_url}/greet", json=request_data, headers={"Content-Type": "application/json"}, timeout=30.0
-            )
-
-            if response.status_code == 200:
-                return response.json()
-            else:
-                logger.error(f"HTTP ошибка {response.status_code}: {response.text}")
-                return None
-
-    except Exception as e:
-        logger.error(f"Ошибка HTTP-запроса к внутреннему API: {e}", exc_info=True)
-        return None
-
-
-async def save_conversation_api(user_chat_id: str, request: str, response: str, is_response_with_buttons: bool = False):
-    """Сохранение диалога через API"""
-    try:
-        base_url = f"http://{settings.HOST}:{settings.PORT}"
-        request_data = {
-            "user_chat_id": user_chat_id,
-            "request": request,
-            "response": response,
-            "is_response_with_buttons": is_response_with_buttons,
-        }
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{base_url}/conversations",
-                json=request_data,
-                headers={"Content-Type": "application/json"},
-                timeout=10.0,
-            )
-
-            if response.status_code == 200:
-                logger.info(f"Диалог успешно сохранен для пользователя {user_chat_id}")
-                return True
-            else:
-                logger.error(f"Ошибка сохранения диалога: {response.status_code} - {response.text}")
-                return False
-
-    except Exception as e:
-        logger.error(f"Ошибка HTTP-запроса сохранения диалога: {e}", exc_info=True)
-        return False
+bot_service = get_bot_service()
 
 
 @router.message()
@@ -98,7 +44,7 @@ async def handle_any_message(message: Message):
 
         search_message = await message.answer("🔍 Ищу информацию и готовлю развернутый ответ...")
 
-        api_result = await call_internal_api(
+        api_result = bot_service.generate_response(
             text=validated_question, chat_id=str(message.chat.id), generate_ai_response=True
         )
 
@@ -113,7 +59,7 @@ async def handle_any_message(message: Message):
 
         answer = api_result["ai_answer"]
 
-        await save_conversation_api(str(message.chat.id), validated_question, answer, is_response_with_buttons=False)
+        bot_service.save_conversation(str(message.chat.id), validated_question, answer, is_response_with_buttons=False)
         await search_message.delete()
         await message.answer(f"💡 <b>Ответ:</b>\n\n{answer}\n\n{settings.warning_message}")
 

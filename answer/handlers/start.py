@@ -1,55 +1,18 @@
 import logging
 
-import httpx
 from aiogram import F, Router
 from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, Message
 
 from answer.handlers.keyboards import get_base_menu
+from answer.services.bot_service import get_bot_service
 from answer.settings import Settings, get_settings
 from answer.utils.validation import get_safe_user_info, validate_callback_query, validate_message
-
 
 logger = logging.getLogger(__name__)
 start_router = Router()
 settings: Settings = get_settings()
-
-
-async def get_or_create_user_api(chat_id: str):
-    """Получение или создание пользователя через API. Возвращает (user_data, is_new_user)"""
-    try:
-        base_url = f"http://{settings.HOST}:{settings.PORT}"
-
-        async with httpx.AsyncClient() as client:
-            get_response = await client.get(f"{base_url}/users/{chat_id}", timeout=10.0)
-
-            if get_response.status_code == 200:
-                user_data = get_response.json()
-                logger.info(f"Найден существующий пользователь: {chat_id}")
-                return user_data, False
-
-            elif get_response.status_code == 404:
-                request_data = {"chat_id": chat_id}
-                create_response = await client.post(
-                    f"{base_url}/users", json=request_data, headers={"Content-Type": "application/json"}, timeout=10.0
-                )
-
-                if create_response.status_code == 200:
-                    user_data = create_response.json()
-                    logger.info(f"Создан новый пользователь: {chat_id}")
-                    return user_data, True
-                else:
-                    logger.error(
-                        f"Ошибка создания пользователя: {create_response.status_code} - {create_response.text}"
-                    )
-                    return None, False
-            else:
-                logger.error(f"Ошибка получения пользователя: {get_response.status_code} - {get_response.text}")
-                return None, False
-
-    except Exception as e:
-        logger.error(f"Ошибка HTTP-запроса пользователя: {e}", exc_info=True)
-        return None, False
+bot_service = get_bot_service()
 
 
 @start_router.message(CommandStart())
@@ -66,7 +29,7 @@ async def command_start_handler(message: Message) -> None:
 
         logger.info(f"Received /start command from user {message.from_user.id}")
         chat_id = str(message.chat.id)
-        user_data, is_new_user = await get_or_create_user_api(chat_id)
+        user_data, is_new_user = bot_service.get_or_create_user(chat_id)
 
         if user_data:
             if is_new_user:

@@ -5,9 +5,10 @@ import sys
 
 sys.path.append("../")
 
+from auth_lib.fastapi import UnionAuth
 from aiogram import Bot, Dispatcher
 from aiogram.types import Update
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi_sqlalchemy import DBSessionMiddleware
@@ -241,7 +242,7 @@ async def generate_response(user_input: UserInput):
     
 
 @app.post("/users", response_model=UserResponse)
-async def create_user(user_request: CreateUserRequest):
+async def create_user(user_request: CreateUserRequest, user=Depends(UnionAuth())):
     """Создание нового пользователя"""
     try:
         with Session() as session:
@@ -273,7 +274,7 @@ async def create_user(user_request: CreateUserRequest):
 
 
 @app.get("/users/{chat_id}", response_model=UserResponse)
-async def get_user(chat_id: str):
+async def get_user(chat_id: str, user=Depends(UnionAuth())):
     """Получение пользователя по chat_id"""
     try:
         with Session() as session:
@@ -291,7 +292,7 @@ async def get_user(chat_id: str):
 
 
 @app.get("/users/{chat_id}/context", response_model=ConversationContextResponse)
-async def get_conversation_context(chat_id: str):
+async def get_conversation_context(chat_id: str, user=Depends(UnionAuth())):
     """Получение контекста диалогов пользователя"""
     try:
         with Session() as session:
@@ -328,7 +329,7 @@ async def get_conversation_context(chat_id: str):
 
 
 @app.post("/conversations")
-async def save_conversation(conversation_request: SaveConversationRequest):
+async def save_conversation(conversation_request: SaveConversationRequest, user=Depends(UnionAuth())):
     """Сохранение диалога"""
     try:
         with Session() as session:

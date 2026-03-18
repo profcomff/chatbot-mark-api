@@ -80,7 +80,7 @@ class BotService:
             logger.error(f"Ошибка получения/создания пользователя: {e}", exc_info=True)
             return None, False
 
-    def generate_response(
+    async def generate_response(
         self, text: str, chat_id: str = "", generate_ai_response: bool = False
     ) -> Optional[Dict[str, Any]]:
         """
@@ -106,14 +106,20 @@ class BotService:
                 else app_state.get("filtered_ensemble_retriever", app_state["ensemble_retriever"])
             )
 
+            processed_text = app_state["text_preprocessor"].preprocess(text)
+
             results, combined_text = get_context(
-                query=text,
+                query=processed_text,
                 key_words_dict=app_state["keywords_dict"],
                 ensemble_retriever=ensemble_retriever,
                 vector_store=app_state["vector_store"],
                 ensemble_k=settings.ensemble_k,
                 verbose=True,
             )
+
+            if results is None:
+                logger.error("Ошибка генерации ответа от get_context")
+                return None
 
             formatted_results = [
                 {

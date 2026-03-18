@@ -44,7 +44,7 @@ async def handle_any_message(message: Message):
 
         search_message = await message.answer("🔍 Ищу информацию и готовлю развернутый ответ...")
 
-        api_result = bot_service.generate_response(
+        api_result = await bot_service.generate_response(
             text=validated_question, chat_id=str(message.chat.id), generate_ai_response=True
         )
 

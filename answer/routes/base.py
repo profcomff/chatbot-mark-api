@@ -175,6 +175,7 @@ async def init_resources():
         "vector_store": app.state.vector_store,
         "ensemble_retriever": app.state.ensemble_retriever,
         "keywords_dict": app.state.keywords_dict,
+        "text_preprocessor": app.state.text_preprocessor,
     }
     search_service.set_app_state(app_state_dict)
 
@@ -191,27 +192,16 @@ async def shutdown_resources():
 async def generate_response(user_input: UserInput):
     if not user_input.text:
         raise HTTPException(status_code=400, detail="Text cannot be empty")
-    
-    if user_input.generate_ai_response:
-        ensemble_retriever = app.state.ensemble_retriever
-    else:
-        ensemble_retriever = app.state.filtered_ensemble_retriever
-    
-    processed_text = app.state.text_preprocessor.preprocess(user_input.text)
-        
-    results, combined_text = get_context(
-        query=processed_text,
-        key_words_dict=app.state.keywords_dict,
-        ensemble_retriever=ensemble_retriever,
-        vector_store=app.state.vector_store,
-        ensemble_k=settings.ensemble_k,
-        verbose=True,
+
+    response = await bot_service.generate_response(
+        text=user_input.text,
+        generate_ai_response=user_input.generate_ai_response,
     )
 
-    if results is None:
+    if response is None:
         raise HTTPException(status_code=500, detail="Ошибка генерации ответа")
 
-    return results
+    return response
     
 
 @app.post("/users", response_model=UserResponse)

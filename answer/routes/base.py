@@ -6,6 +6,7 @@ import sys
 sys.path.append("../")
 
 from auth_lib.fastapi import UnionAuth
+
 from aiogram import Bot, Dispatcher
 from aiogram.types import Update
 from fastapi import FastAPI, HTTPException, Request, Depends

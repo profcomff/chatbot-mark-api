@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session as DbSession
 from sqlalchemy.orm import sessionmaker
 
 from answer import __version__
-from answer.bot.tg_bot.initialisation import bot_shutdown, bot_startup, start_polling
+from answer.bot.tg_bot.initialisation import bot_shutdown, bot_startup
 from answer.models.db import Conversation, User
 from answer.schemas.api_models import (
     ConversationContextResponse,
@@ -120,12 +120,8 @@ async def webhook_handler(request: Request):
 async def init_resources():
     global bot, dp
 
-    bot, dp = await bot_startup(use_webhook=settings.USE_WEBHOOK)
+    bot, dp = await bot_startup()
     app.state.bot = bot
-
-    if not settings.USE_WEBHOOK:
-        asyncio.create_task(start_polling())
-        logger.info("Polling task started in background")
 
     app.state.embedder = init_embedder()
 

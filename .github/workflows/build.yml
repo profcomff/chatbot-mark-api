@@ -128,7 +128,7 @@ jobs:
           docker run --rm --network=web \
             --env DB_DSN='${{ secrets.DB_DSN_PROD }}' \
             --env BOT_TOKEN='${{ secrets.BOT_TOKEN_PROD }}' \
-            --env BASE_URL='${{ vars.BASE_URL }}' \
+            --env BASE_URL='${{ vars.BASE_URL_PROD }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
             --env HOST='${{ vars.HOST }}' \
@@ -145,7 +145,7 @@ jobs:
           docker run --detach --network=web --restart always \
             --env DB_DSN='${{ secrets.DB_DSN_PROD }}' \
             --env BOT_TOKEN='${{ secrets.BOT_TOKEN_PROD }}' \
-            --env BASE_URL='${{ vars.BASE_URL }}' \
+            --env BASE_URL='${{ vars.BASE_URL_PROD }}' \
             --env WEBHOOK_PATH='${{ vars.WEBHOOK_PATH }}' \
             --env QDRANT_API_KEY='${{ secrets.QDRANT_API_KEY }}' \
             --env HOST='${{ vars.HOST }}' \

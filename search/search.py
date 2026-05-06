@@ -6,49 +6,54 @@ from langchain_core.documents import Document
 from .preprocess import preprocess_lemma
 
 
-def get_documents_from_qdrant(client, collection_name, page_content_field="page_content", metadata_field="metadata", limit=500):
+def get_documents_from_qdrant(
+    client,
+    collection_name,
+    page_content_field="page_content",
+    metadata_field="metadata",
+    limit=500,
+):
     """
     Извлекает документы из указанной коллекции Qdrant.
+    Если Qdrant недоступен, функция падает с понятной ошибкой,
+    а не крутится бесконечно.
     """
     documents = []
     points_loaded = 0
     next_page = None
-    
-    try:
-        while points_loaded < limit:
-            try:
-                if next_page:
-                    points, next_page = client.scroll(
-                        collection_name=collection_name, 
-                        with_payload=True, 
-                        offset=next_page,
-                        limit=min(50, limit - points_loaded)  # Уменьшил до 50
-                    )
-                else:
-                    points, next_page = client.scroll(
-                        collection_name=collection_name, 
-                        with_payload=True,
-                        limit=min(50, limit - points_loaded)  # Уменьшил до 50
-                    )
-            except Exception as e:
-                print(f"Ошибка при scroll: {e}, пробуем еще раз...")
-                continue  # Пробуем еще раз
-            
-            if not points:
-                break
-                
-            for point in points:
-                doc_text = point.payload.get(page_content_field, "")
-                metadata = point.payload.get(metadata_field, {})
-                documents.append(Document(page_content=doc_text, metadata=metadata))
-                points_loaded += 1
-                
-            if not next_page:
-                break
-                
-    except Exception as e:
-        print(f"Критическая ошибка: {e}")
-    
+
+    while points_loaded < limit:
+        try:
+            scroll_kwargs = {
+                "collection_name": collection_name,
+                "with_payload": True,
+                "limit": min(50, limit - points_loaded),
+            }
+
+            if next_page is not None:
+                scroll_kwargs["offset"] = next_page
+
+            points, next_page = client.scroll(**scroll_kwargs)
+
+        except KeyboardInterrupt:
+            raise
+
+        except Exception as e:
+            raise RuntimeError(f"Ошибка при scroll в Qdrant: {e}") from e
+
+        if not points:
+            break
+
+        for point in points:
+            payload = point.payload or {}
+            doc_text = payload.get(page_content_field, "")
+            metadata = payload.get(metadata_field, {})
+            documents.append(Document(page_content=doc_text, metadata=metadata))
+            points_loaded += 1
+
+        if next_page is None:
+            break
+
     print(f"Загружено {len(documents)} документов")
     return documents
 

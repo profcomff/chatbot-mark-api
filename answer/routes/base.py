@@ -126,10 +126,20 @@ async def init_resources():
     app.state.embedder = init_embedder()
 
     app.state.qdrant_client = QdrantClient(
-        url="http://qdrant.profcomff.com:6333",
+        host=settings.QDRANT_HOST,
+        port=settings.QDRANT_PORT,
+        https=settings.QDRANT_HTTPS,
         api_key=settings.QDRANT_API_KEY,
-        prefer_grpc=False
+        prefer_grpc=False,
+        timeout=settings.QDRANT_TIMEOUT,
+        check_compatibility=False,
     )
+
+    if not app.state.qdrant_client.collection_exists(settings.collection_name):
+        raise RuntimeError(
+            f"Коллекция Qdrant '{settings.collection_name}' не найдена. "
+            "Проверь COLLECTION_NAME в .env."
+        )
 
     documents = get_documents_from_qdrant(
         client=app.state.qdrant_client,
@@ -180,6 +190,11 @@ async def init_resources():
 @app.on_event("shutdown")
 async def shutdown_resources():
     global bot, dp
+
+    qdrant_client = getattr(app.state, "qdrant_client", None)
+    if qdrant_client is not None:
+        qdrant_client.close()
+
     await bot_shutdown()
     bot = None
     dp = None
